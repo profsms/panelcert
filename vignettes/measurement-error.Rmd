@@ -105,5 +105,25 @@ eiv_adequacy(psid$wks, psid$lwage, psid$id, psid$year,
              reliability = 0.65, pilot = "point")$verdict
 ```
 
+## Cluster-robust standardization
+
+Applied panels cluster standard errors by unit, and since the non-centrality
+is bias over standard error, clustering mechanically deflates `|eta|` and the
+breakdown by `sqrt(psi_hat)` (Paper B, Remark rem-cluster). `cluster = "crve"`
+computes the by-unit Arellano variance-inflation factor; the i.i.d. verdict is
+an upper bound on the alarm. Paper B's middle case: legislative constraints is
+flagged under i.i.d. standard errors but certified under the country-clustered
+ones an applied author would report —
+
+```{r}
+eiv_adequacy(l$ly, l$v2xlg_legcon, l$iso, l$year,
+             sigma_nu = l$v2xlg_legcon_sd,
+             pilot = "point", cluster = "crve")$verdict
+```
+
+— while the judicial-constraints flag survives clustering (`psi_hat` ~ 25
+still leaves an implied size of 67%). Pass `psi =` to supply your own factor
+(e.g. in `eiv_adequacy_summary()`, where raw data is unavailable).
+
 Every number in Paper B's tables is reproduced this way; `data(package =
 "panelcert")` lists the bundled datasets.

@@ -17,7 +17,8 @@ eiv_adequacy_summary(
   alpha = 0.05,
   delta = 0.05,
   gamma = 0.05,
-  pilot = c("conservative", "point", "naive")
+  pilot = c("conservative", "point", "naive"),
+  psi = NULL
 )
 }
 \arguments{
@@ -32,6 +33,9 @@ or the mean squared measurement-error SD}
 \item{N, T}{optional design shape (0 = unknown)}
 
 \item{alpha, delta, gamma, pilot}{as in [eiv_adequacy()]}
+
+\item{psi}{cluster variance-inflation factor (Paper B, Remark rem-cluster);
+the \code{cluster} presets are unavailable without raw data}
 }
 \value{
 an object of class \code{AdequacyReport}
@@ -43,7 +47,10 @@ exactly one of `reliability` or `sigma_nu2` (the mean squared
 measurement-error SD).
 }
 \examples{
-# PSID application (Paper B): flagged at the within reliability 0.65
+# PSID application (Paper B): flagged at the within reliability 0.65 ...
 eiv_adequacy_summary(0.733, 4.25, 83.2, n = 4165, d_K = 601,
                      reliability = 0.65, pilot = "point")
+# ... but certified under person-clustered SEs (psi = 2.33; paper Table 4)
+eiv_adequacy_summary(0.733, 4.25, 83.2, n = 4165, d_K = 601,
+                     reliability = 0.65, pilot = "point", psi = 2.33)
 }

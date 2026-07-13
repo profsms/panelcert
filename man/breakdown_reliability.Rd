@@ -4,7 +4,14 @@
 \alias{breakdown_reliability}
 \title{Self-consistent breakdown reliability}
 \usage{
-breakdown_reliability(beta_star, sigma, tau_star2, alpha = 0.05, delta = 0.05)
+breakdown_reliability(
+  beta_star,
+  sigma,
+  tau_star2,
+  alpha = 0.05,
+  delta = 0.05,
+  psi = 1
+)
 }
 \arguments{
 \item{beta_star}{attenuated slope from the FE regression}
@@ -16,6 +23,8 @@ breakdown_reliability(beta_star, sigma, tau_star2, alpha = 0.05, delta = 0.05)
 \item{alpha}{nominal test level}
 
 \item{delta}{size-distortion tolerance}
+
+\item{psi}{cluster variance-inflation factor (1 = i.i.d. standardization)}
 }
 \value{
 the breakdown reliability in [0, 1]
@@ -23,10 +32,15 @@ the breakdown reliability in [0, 1]
 \description{
 The fixed point \eqn{\lambda = \lambda^\dagger(\lambda)} when the corrected
 pilot \eqn{\beta^*/\lambda} is evaluated at the reliability being solved
-for: \eqn{\lambda^\dagger = 1/(1 + \eta^\dagger \sigma/(|\beta^*|
-\sqrt{\tau^{*2}}))} (Paper B, PSID application). Needs no external noise
-input; uses the exact-inversion root \eqn{\eta^\dagger}.
+for (Paper B, Def. def-breakdown). Closed form
+\eqn{\lambda^\dagger = t^*/(t^* + \eta^\dagger)} with
+\eqn{t^* = |\beta^*|\sqrt{\tau^{*2}}/\sigma} --- the specification's
+conventional t-statistic, so no noise input is needed. Under cluster-robust
+standardization pass the variance-inflation factor \code{psi} (Remark
+rem-cluster): \eqn{t^*} is deflated by \eqn{\sqrt{\psi}}. Uses the
+exact-inversion root \eqn{\eta^\dagger}.
 }
 \examples{
-breakdown_reliability(0.733, 4.25, 83.2)  # PSID application: ~0.71
+breakdown_reliability(0.733, 4.25, 83.2)              # PSID: ~0.71
+breakdown_reliability(0.733, 4.25, 83.2, psi = 2.33)  # person-clustered: ~0.61
 }

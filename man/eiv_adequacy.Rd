@@ -29,6 +29,8 @@ eiv_adequacy(object, ...)
   delta = 0.05,
   gamma = 0.05,
   pilot = c("conservative", "point", "naive"),
+  cluster = c("iid", "crve", "ar1"),
+  psi = NULL,
   ...
 )
 }
@@ -63,6 +65,14 @@ name of the time variable in the model frame}
 
 \item{pilot}{\code{"conservative"} (default), \code{"point"}, or
 \code{"naive"}}
+
+\item{cluster}{standardization of the t-test (Paper B, Remark rem-cluster):
+\code{"iid"} (default), \code{"crve"} (by-unit Arellano CR1
+variance-inflation), or \code{"ar1"} (parametric within-unit AR(1));
+\eqn{|\eta|} and the breakdown are deflated by \eqn{\sqrt{\hat\psi}}}
+
+\item{psi}{supply your own variance-inflation factor (overrides
+\code{cluster})}
 }
 \value{
 an object of class \code{AdequacyReport}

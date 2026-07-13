@@ -1,7 +1,7 @@
 Package: panelcert
 Type: Package
 Title: Inference-Adequacy Diagnostics for Panel-Data Designs
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: person("Stanislaw M. S.", "Halkiewicz", email = "smsh@duck.com",
     role = c("aut", "cre"), comment = c(ORCID = "0009-0000-7344-7522"))
 Description: Certifies whether naive inference on an already-estimated

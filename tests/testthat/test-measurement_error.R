@@ -43,11 +43,19 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   expect_equal(r$eta, 0.23640, tolerance = 5e-3)
   expect_equal(r$implied_size, 0.05643, tolerance = 5e-4 / 0.05643)
   expect_equal(r$threshold, 0.652, tolerance = 5e-4 / 0.652)
-  expect_equal(r$breakdown, 0.720, tolerance = 2e-3 / 0.720)  # NOT the stale 0.816
+  expect_equal(r$breakdown, 0.762, tolerance = 2e-3 / 0.762)  # fixed point (paper Table 3)
+  # point verdict is exactly equivalent to lambda_hat >= breakdown
+  expect_identical(r$statistic$lambda_hat >= r$breakdown, r$verdict == "CERTIFIED")
   expect_identical(r$verdict, "CERTIFIED")
   rc <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd)
   expect_identical(rc$verdict, "CERTIFIED")
   expect_gt(rc$statistic$eta_upper, rc$eta)
+  # cluster-robust (country CRVE): paper Table 3 psi_hat = 19.2, still certified
+  rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
+                      pilot = "point", cluster = "crve")
+  expect_equal(rcr$statistic$psi_hat, 19.18, tolerance = 1e-2)
+  expect_equal(rcr$implied_size, 0.050, tolerance = 1e-3 / 0.050)
+  expect_identical(rcr$verdict, "CERTIFIED")
 
   s <- vdem_spec(v, "v2xlg_legcon", "v2xlg_legcon_sd")
   r <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "point")
@@ -55,8 +63,14 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   expect_equal(r$statistic$lambda_hat, 0.5472, tolerance = 1e-3 / 0.5472)
   expect_equal(r$eta, 0.8853, tolerance = 5e-3)
   expect_equal(r$implied_size, 0.1435, tolerance = 1e-3 / 0.1435)
-  expect_equal(r$breakdown, 0.666, tolerance = 2e-3 / 0.666)  # NOT the stale 0.781
+  expect_equal(r$breakdown, 0.621, tolerance = 2e-3 / 0.621)  # fixed point (paper Table 3)
   expect_identical(r$verdict, "FLAGGED")
+  # the paper's middle case: flagged iid, CERTIFIED under country clustering
+  rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
+                      pilot = "point", cluster = "crve")
+  expect_equal(rcr$statistic$psi_hat, 24.05, tolerance = 1e-2)
+  expect_equal(rcr$implied_size, 0.054, tolerance = 1e-3 / 0.054)
+  expect_identical(rcr$verdict, "CERTIFIED")
 
   # THE naive-pilot danger (Prop. prop-pilot(i)) on real data
   rn <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "naive")
@@ -70,9 +84,16 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   expect_equal(r$statistic$lambda_hat, 0.4125, tolerance = 1e-3 / 0.4125)
   expect_equal(r$eta, 12.10, tolerance = 1e-2)
   expect_equal(r$implied_size, 1, tolerance = 1e-6)
-  expect_equal(r$breakdown, 0.968, tolerance = 2e-3 / 0.968)
+  expect_equal(r$breakdown, 0.929, tolerance = 2e-3 / 0.929)  # fixed point (paper Table 3)
   expect_identical(r$verdict, "FLAGGED")
   expect_true(any(grepl("quadratic", r$notes)))
+  # flag SURVIVES clustering: psi_hat = 25.2 but eta_CR = 2.4, size 67%
+  rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
+                      pilot = "point", cluster = "crve")
+  expect_equal(rcr$statistic$psi_hat, 25.21, tolerance = 1e-2)
+  expect_equal(rcr$eta, 2.41, tolerance = 1e-2)
+  expect_equal(rcr$implied_size, 0.674, tolerance = 3e-3 / 0.674)
+  expect_identical(rcr$verdict, "FLAGGED")
 })
 
 test_that("reference case 2b: gate-1 headline (spec 7.2)", {
@@ -91,12 +112,22 @@ test_that("PSID application via summary form (Paper B app-psid)", {
 
   expect_equal(breakdown_reliability(bstar, sigma, tau2), 0.707,
                tolerance = 2e-3 / 0.707)
+  # cluster-robust breakdown at the paper's person-cluster psi = 2.33: 0.61
+  expect_equal(breakdown_reliability(bstar, sigma, tau2, psi = 2.330), 0.613,
+               tolerance = 2e-3 / 0.613)
 
   r <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.65,
                             pilot = "point")
   expect_equal(r$eta, 0.848, tolerance = 2e-3 / 0.848)
   expect_equal(r$implied_size, 0.1356, tolerance = 1e-3 / 0.1356)
   expect_identical(r$verdict, "FLAGGED")
+  # ... but CERTIFIED under person clustering (paper Table 4: size 8.6%)
+  rpsi <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.65,
+                               pilot = "point", psi = 2.330)
+  expect_equal(rpsi$eta, 0.556, tolerance = 2e-3 / 0.556)
+  expect_equal(rpsi$implied_size, 0.086, tolerance = 1e-3 / 0.086)
+  expect_identical(rpsi$verdict, "CERTIFIED")
+  expect_equal(rpsi$breakdown, 0.613, tolerance = 2e-3 / 0.613)
 
   rp <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.82,
                              pilot = "point")
