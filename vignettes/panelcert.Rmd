@@ -1,0 +1,109 @@
+---
+title: "panelcert: certifying naive panel inference"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{panelcert: certifying naive panel inference}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+# Evaluate chunks only when the package is actually installed. Before the
+# package is built (e.g. knitting straight from the source tree) chunks are
+# shown but not run, so the vignette never errors on a missing `panelcert`.
+# During R CMD check the package IS available, so everything runs as normal.
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      eval = requireNamespace("panelcert", quietly = TRUE))
+set.seed(1)
+```
+
+## What the package does
+
+`panelcert` answers one question: **given the fixed-effect panel
+regression you have already run, is the naive t-test size-controlled — and if
+not, by how much does it fail?** It is a diagnostic tool, not an estimation
+framework and not a remedy library. Each diagnostic consumes your fitted model
+(`fixest::feols`, `plm::plm`, `lm`) or the raw panel, and returns an
+`AdequacyReport` with a plain-language verdict:
+
+- **CERTIFIED at tolerance delta** — the worst-case size of the nominal-alpha
+  test stays below `alpha + delta`;
+- **FLAGGED (implied size X%)** — it does not, and the report quantifies the
+  failure and points to the appropriate remedy;
+- **INCONCLUSIVE** — a pre-outcome design statistic that needs a pilot input.
+
+Three modules, one per source paper:
+
+| Module | Pathology | Headline statistic |
+|---|---|---|
+| A | variance-estimator choice under FE saturation | HC0–HC3 hierarchy, leverage |
+| B | classical measurement error in the regressor | within reliability `lambda_hat` |
+| C | TWFE heterogeneity in staggered DiD | design statistic `Gamma` |
+
+## Bundled data — the paper applications run offline
+
+The reference panels from the source papers ship with the package, so their
+applications reproduce with no data download. After `library(panelcert)` the
+datasets are available by name:
+
+```{r}
+library(panelcert)
+data(package = "panelcert")$results[, "Item"]   # vdem, psid, castle, divorce
+twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)$verdict
+```
+
+Each module vignette reproduces its paper's application directly from these
+objects.
+
+## The shared design summary
+
+Every module rests on the same design primitives: the fixed-effect dimension
+`d_K` (union-find on the unit–time graph), the saturation `rho = d_K/n`, and
+the two-way within transformation.
+
+```{r}
+library(panelcert)
+unit <- rep(1:40, each = 12)
+time <- rep(1:12, times = 40)
+design_summary(unit, time)
+```
+
+## A sixty-second tour
+
+Module B on a panel with a noisy regressor (measurement-error SD known, e.g.
+from a validation study or a published measurement model):
+
+```{r}
+n <- length(unit)
+x_true <- rnorm(n) + 0.2 * unit          # true regressor
+x_obs <- x_true + rnorm(n, sd = 0.3)     # observed with error
+y <- 0.6 * x_true + rnorm(n)
+eiv_adequacy(y, x_obs, unit, time, sigma_nu = 0.3)
+```
+
+Module C, before any outcome exists — vetting a staggered adoption design:
+
+```{r}
+ft <- ifelse(unit <= 15, 4, ifelse(unit <= 30, 8, NA))
+twfe_design(unit, time, ft)
+```
+
+The verdict logic is *correct by default*: Module B evaluates the certificate
+at the upper confidence bound of the attenuation-corrected pilot (the naive
+attenuated pilot is available only as an explicitly labelled opt-in); Module C
+uses the shrinkage-corrected cohort dispersion and computes the cluster
+variance-inflation factor from the realized design rather than assuming its
+direction. These defaults guard against specific errors the source papers
+document; the module vignettes explain each one.
+
+## Where the numbers come from
+
+All thresholds derive from one limit experiment: the studentized statistic is
+asymptotically `N(eta, 1)`, the two-sided size is even in `eta` with leading
+distortion `z * phi(z) * eta^2` (quadratic — a linear expansion is spurious and
+badly anti-conservative), and the operational threshold `eta_dagger(alpha,
+delta)` is the exact-inversion root of `size(eta) = alpha + delta`, about 0.652
+at `alpha = delta = 0.05`. The empirical applications in the source papers
+(V-Dem democracy–growth, PSID earnings, castle-doctrine and no-fault-divorce
+DiD) are reproduced to reference tolerance by this package's test suite, in
+lockstep with the Julia reference implementation.

@@ -1,0 +1,109 @@
+---
+title: "Module B: measurement-error adequacy"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Module B: measurement-error adequacy}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+# Evaluate chunks only when the package is actually installed (see panelcert.Rmd).
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      eval = requireNamespace("panelcert", quietly = TRUE))
+set.seed(3)
+```
+
+## The problem
+
+Fixed-effect saturation removes signal from the regressor while (largely)
+preserving measurement noise — the Griliches–Hausman amplification. Paper B
+shows the resulting size distortion of the naive t-test is governed by one
+number, the **within reliability**
+
+`lambda_hat = 1 - mean(sigma_nu^2) * (n - d_K) / tau_star2`,
+
+the share of post-projection variation in the observed regressor that is
+signal. The feasible non-centrality is
+`|eta| = (|beta0|/sigma) * (1 - lambda) * sqrt(tau_star2)`, and naive
+inference is `delta`-adequate iff `|eta| <= eta_dagger(alpha, delta)` — the
+**exact-inversion** threshold (about 0.652 at `alpha = delta = 0.05`). The
+quadratic closed form `sqrt(delta/(z*phi(z)))` is its accurate companion; a
+linear expansion is spurious (the size is even in `eta`) and must not be used.
+
+## Noise inputs
+
+Three pathways, in decreasing order of directness:
+
+1. **published measurement-model posteriors** (V-Dem-style):
+   `codelow`/`codehigh` interval bounds, converted by
+   `reliability_from_interval()`;
+2. **validation-study reliability ratios** (PSID-style):
+   `reliability_from_ratio(r, within_sd)`;
+3. **direct** `sigma_nu` or `reliability` values, including a sensitivity grid.
+
+## The honesty machinery, demonstrated
+
+The most natural implementation — plugging the attenuated `beta*` from the
+regression table into the threshold — is biased toward *certifying failing
+specifications*, by exactly the factor `lambda` whose smallness is the reason
+to run the diagnostic (Paper B, Proposition on pilots). The package defaults
+to the corrected pilot at its upper confidence bound; the naive form is
+opt-in and labelled. On a design built to fail:
+
+```{r}
+library(panelcert)
+N <- 100; T <- 8
+unit <- rep(1:N, each = T); time <- rep(1:T, times = N)
+n <- N * T
+x_true <- 0.5 * rnorm(n)
+x_obs <- x_true + rnorm(n, sd = 0.45)   # within reliability ~ 0.55
+y <- 1.0 * x_true + rnorm(n)
+
+r_default <- eiv_adequacy(y, x_obs, unit, time, sigma_nu = 0.45)
+r_naive <- eiv_adequacy(y, x_obs, unit, time, sigma_nu = 0.45, pilot = "naive")
+c(default = r_default$verdict, naive = r_naive$verdict)
+```
+
+The naive pilot understates `|eta|` by the factor `lambda` and can certify a
+specification whose true size is several times nominal — in Paper B's V-Dem
+application it certifies the legislative-constraints index whose exact size is
+14%. The corrected default flags it.
+
+```{r}
+r_default
+```
+
+Alongside the verdict, the report carries the **breakdown reliability**
+`lambda_dagger` — how reliable the regressor would have to be for naive
+inference to pass — and the `sqrt(lambda)` **power tax**, which applies even
+to certified specifications.
+
+## The empirical poles (Paper B), reproduced from bundled data
+
+The V-Dem democracy–growth panel ships with the package as `vdem` (the
+measurement-error SDs are published data). Paper B's two-pole result runs
+directly off it — no download:
+
+```{r}
+# Aggregate polyarchy: certified (lambda ~ 0.90, implied size ~5.6%)
+p <- vdem[complete.cases(vdem$ly, vdem$v2x_polyarchy, vdem$v2x_polyarchy_sd), ]
+eiv_adequacy(p$ly, p$v2x_polyarchy, p$iso, p$year, sigma_nu = p$v2x_polyarchy_sd)
+
+# Legislative constraints: flagged (lambda ~ 0.55, implied size ~14%)
+l <- vdem[complete.cases(vdem$ly, vdem$v2xlg_legcon, vdem$v2xlg_legcon_sd), ]
+eiv_adequacy(l$ly, l$v2xlg_legcon, l$iso, l$year,
+             sigma_nu = l$v2xlg_legcon_sd)$verdict
+```
+
+The second application ships as `psid` (Cornwell–Rupert earnings): the
+within transformation alone moves the log wage from certified at the level
+reliability 0.82 to flagged across the validated within band 0.50–0.65.
+
+```{r}
+eiv_adequacy(psid$wks, psid$lwage, psid$id, psid$year,
+             reliability = 0.65, pilot = "point")$verdict
+```
+
+Every number in Paper B's tables is reproduced this way; `data(package =
+"panelcert")` lists the bundled datasets.

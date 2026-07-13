@@ -1,0 +1,24 @@
+Package: panelcert
+Type: Package
+Title: Inference-Adequacy Diagnostics for Panel-Data Designs
+Version: 0.1.0
+Authors@R: person("Stanislaw M. S.", "Halkiewicz", email = "smsh@duck.com",
+    role = c("aut", "cre"), comment = c(ORCID = "0009-0000-7344-7522"))
+Description: Certifies whether naive inference on an already-estimated
+    fixed-effect panel design is size-controlled, and if not, by how much.
+    Three diagnostic modules, one per source paper: leverage/variance
+    estimator adequacy (HC0-HC3 hierarchy under fixed-effect saturation),
+    measurement-error adequacy (Stock-Yogo-style within-reliability
+    thresholds via exact inversion of the non-central size), and
+    staggered-DiD TWFE-heterogeneity adequacy (the Gamma design statistic
+    and its cluster-robust form). Diagnostic only: consumes fitted output,
+    implements no remedies, and points to them.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 3.5.0)
+Imports: stats
+Suggests: testthat (>= 3.0.0), fixest, plm, knitr, rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+RoxygenNote: 7.3.1

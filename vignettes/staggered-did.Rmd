@@ -1,0 +1,96 @@
+---
+title: "Module C: TWFE-heterogeneity adequacy for staggered DiD"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Module C: TWFE-heterogeneity adequacy for staggered DiD}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+# Evaluate chunks only when the package is actually installed (see panelcert.Rmd).
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      eval = requireNamespace("panelcert", quietly = TRUE))
+set.seed(4)
+```
+
+## The design statistic, before any outcome exists
+
+Under heterogeneous treatment effects, the TWFE coefficient is a weighted
+average with weights `w` that need not be convex. Paper C shows the *size
+distortion* of the TWFE t-test is governed by
+
+`Gamma = sqrt(N1) * ||w - u||`,
+
+the scaled distance of the weights from uniform — a **pure design statistic**,
+computable from the adoption pattern alone. `Gamma = 0` exactly for clean
+block designs; it grows with staggering and negative weights. Crucially,
+`Gamma` is invariant to replicating the panel while the absolute weighting
+bias shrinks — so a design can look safe to estimand-level diagnostics while
+its t-test stays arbitrarily distorted.
+
+```{r}
+library(panelcert)
+N <- 48; T <- 12
+unit <- rep(1:N, each = T); time <- rep(1:T, times = N)
+
+# a block design: one adoption date, never-treated reservoir
+ft_block <- ifelse(unit <= 16, 5, NA)
+twfe_design(unit, time, ft_block)$statistic$Gamma
+
+# three cohorts, no never-treated reservoir (Paper C's simulation design)
+ft_stag <- ifelse(unit <= 16, 3, ifelse(unit <= 32, 7, 11))
+twfe_design(unit, time, ft_stag)
+```
+
+Run this before committing to a design: the report's breakdown value is the
+largest heterogeneity-to-noise ratio `c/sigma` the design tolerates.
+
+## The inference layer
+
+With an outcome, `twfe_adequacy()` adds the realized non-centrality (from
+cohort-level effect deviations under the TWFE weights) and the worst-case one
+`(c/sigma) * Gamma`. Two honesty defaults are built in:
+
+- the cohort-dispersion pilot is **shrinkage-corrected**:
+  `var_shrunk = max(0, var(ATT_g) - mean(se_g^2))` — naive dispersion is
+  estimation-noise-inflated and overstates the alarm;
+- the cluster variance-inflation factor `psi` is **computed on the realized
+  design** (parametric AR(1) route by default, with an estimator-driven
+  cross-check), never assumed: persistent errors give `psi > 1` and shrink the
+  distortion, exchangeable ones give `psi < 1` and worsen it.
+
+```{r}
+delta_g <- c(-0.6, 0, 0.6)                       # heterogeneous cohort effects
+eff <- delta_g[ifelse(unit <= 16, 1, ifelse(unit <= 32, 2, 3))]
+D <- as.numeric(!is.na(ft_stag) & time >= ft_stag)
+y <- 0.1 * unit / N + D * eff + rnorm(N * T, sd = 0.5)
+twfe_adequacy(y, unit, time, ft_stag)
+```
+
+The internal cohort pilot is a simplified not-yet-treated difference in means,
+deliberately *not* a Callaway–Sant'Anna implementation; for a paper-grade
+pilot, pass `cohort_effects` and `cohort_ses` from `did::att_gt()` /
+`csdid` / `fixest::sunab` — the diagnostic then uses your estimates verbatim.
+When a design is flagged, those same heterogeneity-robust estimators are the
+remedy.
+
+## The empirical poles (Paper C), reproduced from bundled data
+
+Both audit panels ship with the package — `castle` and `divorce` — so the
+two-pole result runs directly. Same estimator, same protocol, opposite
+verdicts:
+
+```{r}
+# Castle doctrine: Gamma = 0.21, certified at size 5.0%, robust to clustering
+twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)$verdict
+
+# No-fault divorce: Gamma = 0.86, flagged (60% iid -> 42% clustered)
+d <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
+c(Gamma = round(d$statistic$Gamma, 2), psi = round(d$statistic$psi_hat, 2),
+  size = round(d$implied_size, 2), verdict = d$verdict)
+```
+
+The cluster inflation `psi = 1.62` is computed from the realized design, not
+assumed; the full audit is reproduced by the package test suite. `data(package
+= "panelcert")` lists the bundled datasets.

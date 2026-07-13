@@ -1,0 +1,71 @@
+---
+title: "Module A: variance estimators under fixed-effect saturation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Module A: variance estimators under fixed-effect saturation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+# Evaluate chunks only when the package is actually installed (see panelcert.Rmd).
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      eval = requireNamespace("panelcert", quietly = TRUE))
+set.seed(2)
+```
+
+## The problem
+
+As fixed effects saturate (`rho = d_K/n` grows), conventional variance
+estimators split in opposite directions (Paper A, Theorem 3.3):
+
+- **HC0** is biased downward by the factor `(1 - rho)`: t-tests over-reject,
+  with asymptotic size `2(1 - pnorm(z * sqrt(1 - rho)))` — about 9% at
+  `rho = 0.25` and 17% at `rho = 0.5` for a nominal 5% test;
+- **HC3** over-corrects by exactly the inverse factor `1/(1 - rho)`: size
+  drops below 1% at `rho = 0.5`, and confidence intervals are artificially
+  wide;
+- **HC2 / leave-one-out** (and HC1 under uniform leverage) is the estimator
+  that stays exact.
+
+`leverage_report()` reproduces your FE regression via Frisch–Waugh, computes
+the full hierarchy of standard errors with the exact full-regression leverage
+`H_ii = (P_K)_ii + Xt_i^2 / (X'MX)`, and reports whether the estimator choice
+materially changes inference on your design.
+
+## A saturated design
+
+```{r}
+library(panelcert)
+N <- 12; T <- 5
+unit <- rep(1:N, each = T); time <- rep(1:T, times = N)
+n <- N * T
+x <- rnorm(n) + 0.3 * unit
+y <- 0.8 * x + rnorm(n)
+leverage_report(y, x, unit, time)
+```
+
+At `rho = (N + T - 1)/n` near 0.27, the HC0 and HC3 standard errors bracket
+the leave-one-out one by visibly asymmetric factors, and the report's implied
+size quantifies what an HC0 user would actually suffer. The `breakdown
+threshold` line is the saturation `rho_dagger` (about 0.296 at
+`alpha = delta = 0.05`) at which HC0-based inference exits the tolerance.
+
+## Reading the flags
+
+Two notes deserve attention when they appear:
+
+- the **HC3 over-correction flag** fires whenever `rho > 0.1` (Paper A's rule
+  of thumb): switching to leave-one-out recovers the honestly narrower
+  interval;
+- the **leverage non-uniformity flag** (`hmax/hmin` large) marks designs —
+  small country-year cells, "anchor" units — where HC1 silently diverges from
+  leave-one-out and only the latter remains reliable (Paper A, Remark 3.4).
+
+Fitted-model ingestion works the same way:
+
+```{r, eval = requireNamespace("fixest", quietly = TRUE)}
+d <- data.frame(y = y, x = x, unit = unit, time = time)
+m <- fixest::feols(y ~ x | unit + time, data = d)
+leverage_report(m)$verdict
+```
