@@ -87,3 +87,35 @@
 #' @examples
 #' twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
 "divorce"
+
+#' Piotroski F-Score / Visegrad firm panel (Paper A application)
+#'
+#' Hand-collected firm--year panel of Piotroski F-Scores and one-year-ahead
+#' returns for firms on the Warsaw, Budapest and Prague exchanges, 2010--2024,
+#' consolidated from the three exchange production files. Paper A uses it to
+#' show that under fixed-effect saturation the leverage-sensitive variance
+#' estimators (HC0, HC3) diverge from the leave-one-out (HC2/LO) recommendation
+#' along the predicted \code{sqrt(1 - rho)} / \code{1/sqrt(1 - rho)} ratios,
+#' while every specification leaves the F-Score coefficient indistinguishable
+#' from zero. The seven Table 2 specifications are recovered from this object by
+#' choosing the outcome and subset: arithmetic return (\code{ret}); the
+#' preferred log return (\code{log1p(ret)}); its 1/99 winsorization; the binary
+#' regressor \code{as.numeric(fscore >= 7)}; the Poland-only subset; the
+#' active-only subset (\code{status == "active"}); and country-year fixed
+#' effects (pass \code{paste(country, year)} as the time id).
+#'
+#' @format A data frame with 217 firm-year rows and 6 variables:
+#' \describe{
+#'   \item{uid}{firm ticker (unit id)}
+#'   \item{year}{fiscal year (time id)}
+#'   \item{country}{Poland, Hungary or Czech Republic}
+#'   \item{status}{\code{"active"} or \code{"delisted"}}
+#'   \item{fscore}{Piotroski F-Score, 0--9 integer composite (the regressor)}
+#'   \item{ret}{one-year-ahead return (outcome)}
+#' }
+#' @source Hand-collected from Warsaw (WSE), Budapest (BSE) and Prague (PSE)
+#'   exchange filings; the panel of Paper A's empirical application.
+#' @examples
+#' # Preferred specification: log return on F-Score, firm + year fixed effects
+#' leverage_report(log1p(fscore$ret), fscore$fscore, fscore$uid, fscore$year)
+"fscore"

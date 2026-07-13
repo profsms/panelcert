@@ -69,3 +69,39 @@ d <- data.frame(y = y, x = x, unit = unit, time = time)
 m <- fixest::feols(y ~ x | unit + time, data = d)
 leverage_report(m)$verdict
 ```
+
+## The empirical application (Paper A), reproduced from bundled data
+
+Paper A's firm panel ships with the package as `fscore`: Piotroski F-Scores and
+one-year-ahead returns for Warsaw, Budapest and Prague listings, 2010--2024
+(217 firm-years, 19 firms). The preferred specification --- log return on the
+F-Score, firm and year fixed effects --- runs directly off it:
+
+```{r}
+library(panelcert)
+r <- leverage_report(log1p(fscore$ret), fscore$fscore, fscore$uid, fscore$year)
+c(beta = round(r$statistic$beta, 5),
+  HC0_LO = round(r$statistic$se_hc0 / r$statistic$se_hc2, 3),
+  HC3_LO = round(r$statistic$se_hc3 / r$statistic$se_hc2, 3),
+  rho = round(r$design$rho, 3))
+```
+
+The empirical HC0/LO and HC3/LO ratios track the theoretical `sqrt(1 - rho)`
+and `1/sqrt(1 - rho)` almost exactly, and the F-Score coefficient is
+indistinguishable from zero. The most favourable specification is Poland alone,
+whose `|t|` is still only 0.61:
+
+```{r}
+pl <- fscore$country == "Poland"
+e <- leverage_report(log1p(fscore$ret[pl]), fscore$fscore[pl],
+                     fscore$uid[pl], fscore$year[pl])
+round(abs(e$statistic$beta / e$statistic$se_hc2), 2)
+```
+
+The country-year-fixed-effect specification is the leverage cautionary tale of
+the flag above: each firm sits in exactly one country, so the firm +
+country-year design splits into three disconnected country blocks and the
+realized FE dimension is `d_K = 61`, which `leverage_report()` computes from the
+actual design via union-find rather than a nominal `19 + 45 - 1` count. Pass
+`paste(fscore$country, fscore$year)` as the time id to reproduce it.
+`data(package = "panelcert")` lists the bundled datasets.

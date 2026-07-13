@@ -48,7 +48,7 @@ datasets are available by name:
 
 ```{r}
 library(panelcert)
-data(package = "panelcert")$results[, "Item"]   # vdem, psid, castle, divorce
+data(package = "panelcert")$results[, "Item"]   # vdem, psid, castle, divorce, fscore
 twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)$verdict
 ```
 
