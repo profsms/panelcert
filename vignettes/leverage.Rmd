@@ -1,8 +1,8 @@
 ---
-title: "Module A: variance estimators under fixed-effect saturation"
+title: "Diffuse companion: variance estimators under FE saturation"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Module A: variance estimators under fixed-effect saturation}
+  %\VignetteIndexEntry{Diffuse companion: variance estimators under FE saturation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -16,8 +16,8 @@ set.seed(2)
 
 ## The problem
 
-As fixed effects saturate (`rho = d_K/n` grows), conventional variance
-estimators split in opposite directions (Paper A, Theorem 3.3):
+Under the repaired diffuse-regime framework, conventional variance estimators
+split in opposite directions as fixed effects saturate (`rho = d_K/n` grows):
 
 - **HC0** is biased downward by the factor `(1 - rho)`: t-tests over-reject,
   with asymptotic size `2(1 - pnorm(z * sqrt(1 - rho)))` — about 9% at
@@ -25,8 +25,14 @@ estimators split in opposite directions (Paper A, Theorem 3.3):
 - **HC3** over-corrects by exactly the inverse factor `1/(1 - rho)`: size
   drops below 1% at `rho = 0.5`, and confidence intervals are artificially
   wide;
-- **HC2 / leave-one-out** (and HC1 under uniform leverage) is the estimator
-  that stays exact.
+- **HC1 and HC2** remove the saturation factor in the conditionally
+  homoskedastic, uniform-leverage limit. Under heteroskedasticity their limits
+  retain the paper's `omega^2/omega_eff^2` factor.
+
+HC2 is the MacKinnon--White leverage adjustment. It is not the
+Kline--Saggio--Solvsten leave-out estimator, which this package does not
+implement. None of these asymptotic statements licenses the module when
+identifying variation is concentrated or leverage balance fails.
 
 `leverage_report()` reproduces your FE regression via Frisch–Waugh, computes
 the full hierarchy of standard errors with the exact full-regression leverage
@@ -46,7 +52,7 @@ leverage_report(y, x, unit, time)
 ```
 
 At `rho = (N + T - 1)/n` near 0.27, the HC0 and HC3 standard errors bracket
-the leave-one-out one by visibly asymmetric factors, and the report's implied
+HC2 by visibly asymmetric factors, and the report's implied
 size quantifies what an HC0 user would actually suffer. The `breakdown
 threshold` line is the saturation `rho_dagger` (about 0.296 at
 `alpha = delta = 0.05`) at which HC0-based inference exits the tolerance.
@@ -55,12 +61,12 @@ threshold` line is the saturation `rho_dagger` (about 0.296 at
 
 Two notes deserve attention when they appear:
 
-- the **HC3 over-correction flag** fires whenever `rho > 0.1` (Paper A's rule
-  of thumb): switching to leave-one-out recovers the honestly narrower
-  interval;
+- the **HC3 over-correction flag** fires at the module's `rho > 0.1` reporting
+  convention; HC2 is the preferred member of the HC0--HC3 family shown here;
 - the **leverage non-uniformity flag** (`hmax/hmin` large) marks designs —
-  small country-year cells, "anchor" units — where HC1 silently diverges from
-  leave-one-out and only the latter remains reliable (Paper A, Remark 3.4).
+  small country-year cells, "anchor" units — where the uniform-leverage limit
+  is not licensed. Use a separately implemented leave-out method rather than
+  treating any result from this module as a certificate.
 
 Fitted-model ingestion works the same way:
 
@@ -70,9 +76,9 @@ m <- fixest::feols(y ~ x | unit + time, data = d)
 leverage_report(m)$verdict
 ```
 
-## The empirical application (Paper A), reproduced from bundled data
+## Diffuse-companion application, reproduced from bundled data
 
-Paper A's firm panel ships with the package as `fscore`: Piotroski F-Scores and
+The firm panel also used by current Paper A ships as `fscore`: Piotroski F-Scores and
 one-year-ahead returns for Warsaw, Budapest and Prague listings, 2010--2024
 (217 firm-years, 19 firms). The preferred specification --- log return on the
 F-Score, firm and year fixed effects --- runs directly off it:
@@ -81,12 +87,12 @@ F-Score, firm and year fixed effects --- runs directly off it:
 library(panelcert)
 r <- leverage_report(log1p(fscore$ret), fscore$fscore, fscore$uid, fscore$year)
 c(beta = round(r$statistic$beta, 5),
-  HC0_LO = round(r$statistic$se_hc0 / r$statistic$se_hc2, 3),
-  HC3_LO = round(r$statistic$se_hc3 / r$statistic$se_hc2, 3),
+  HC0_HC2 = round(r$statistic$se_hc0 / r$statistic$se_hc2, 3),
+  HC3_HC2 = round(r$statistic$se_hc3 / r$statistic$se_hc2, 3),
   rho = round(r$design$rho, 3))
 ```
 
-The empirical HC0/LO and HC3/LO ratios track the theoretical `sqrt(1 - rho)`
+The empirical HC0/HC2 and HC3/HC2 ratios track the theoretical `sqrt(1 - rho)`
 and `1/sqrt(1 - rho)` almost exactly, and the F-Score coefficient is
 indistinguishable from zero. The most favourable specification is Poland alone,
 whose `|t|` is still only 0.61:

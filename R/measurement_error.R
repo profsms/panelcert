@@ -1,12 +1,20 @@
 # Module B \u2014 measurement-error adequacy (spec section 4; Paper B).
 # Formula sources: feasible non-centrality (Cor. cor-feasible); corrected pilot
-# beta*/lambda (Prop. prop-pilot); pilot se sigma/(lambda sqrt(tau*2))
-# (Cor. cor-slope); exact-inversion threshold eta\u2020 with the quadratic closed
-# form as companion \u2014 NEVER the discarded linear surrogate (Rem. rem-exact-cv);
-# FIXED-POINT breakdown reliability lambda\u2020 = t*/(t* + eta\u2020),
-# t* = |beta*|sqrt(tau*2)/sigma (Def. def-breakdown); cluster layer psi_hat
-# deflating |eta| and t* by sqrt(psi) (Rem. rem-cluster); exact non-central
-# implied size.
+# beta*/lambda (Prop. prop-pilot); pilot se s_CR/(lambda sqrt(tau*2)) with
+# s_CR = sigma sqrt(psi) \u2014 the CLUSTER-ROBUST scale, not the i.i.d. sigma
+# (Rem. rem-plugin, Prop. prop-certificate); exact-inversion threshold eta\u2020
+# with the quadratic closed form as companion \u2014 NEVER the discarded linear
+# surrogate (Rem. rem-exact-cv); FIXED-POINT breakdown reliability
+# lambda\u2020 = t*/(t* + eta\u2020), t* = |beta*|sqrt(tau*2)/sigma
+# (Def. def-breakdown); cluster layer psi_hat deflating |eta| and t* by
+# sqrt(psi) (Rem. rem-cluster); exact non-central implied size.
+#
+# NOTE on the pilot se: Cor. cor-slope gives the i.i.d. law
+# beta0_corr => beta0 + N(0, sigma^2/(lambda^2 tau*2)). Under clustering the
+# score variance is Psi_n ->p psi sigma^2 tau*2, so the correct limit carries
+# psi: N(0, psi sigma^2/(lambda^2 tau*2)). This file has always used s_CR and
+# is therefore right; the manuscript's Remark rem-plugin cited the i.i.d.
+# variance until the 2026-07-31 audit and was corrected to match this code.
 
 #' Measurement-error SDs from published credible-interval bounds
 #'
@@ -21,22 +29,35 @@
 reliability_from_interval <- function(codelow, codehigh) {
   if (length(codelow) != length(codehigh))
     stop("codelow and codehigh must have equal length")
+  if (any(!is.finite(codelow)) || any(!is.finite(codehigh)))
+    stop("interval bounds must be finite")
+  if (any(codehigh < codelow))
+    stop("codehigh must be at least codelow for every observation")
   (codehigh - codelow) / 2
 }
 
 #' Measurement-error SD implied by an external reliability ratio
 #'
-#' PSID-style validation studies: `sigma_nu = sqrt((1-r)/r) * within_sd`.
+#' With the documented default `scale = "observed"`, `within_sd` is the SD of
+#' the observed regressor and `sigma_nu = sqrt(1-r) * within_sd`. Set
+#' `scale = "signal"` only when `within_sd` is the latent-signal SD; then
+#' `sigma_nu = sqrt((1-r)/r) * within_sd`.
 #'
 #' @param r reliability ratio in (0, 1]
-#' @param within_sd within-SD of the observed regressor
+#' @param within_sd within-SD on the scale selected by `scale`
+#' @param scale `"observed"` (default) or `"signal"`
 #' @return scalar measurement-error SD
 #' @examples
 #' reliability_from_ratio(0.65, within_sd = 0.15)  # PSID within reliability
 #' @export
-reliability_from_ratio <- function(r, within_sd) {
+reliability_from_ratio <- function(r, within_sd,
+                                   scale = c("observed", "signal")) {
+  scale <- match.arg(scale)
   if (!(r > 0 && r <= 1)) stop("reliability ratio must be in (0, 1]")
-  sqrt((1 - r) / r) * within_sd
+  if (!is.finite(within_sd) || within_sd < 0)
+    stop("within_sd must be finite and non-negative")
+  factor <- if (scale == "observed") sqrt(1 - r) else sqrt((1 - r) / r)
+  factor * within_sd
 }
 
 #' Self-consistent breakdown reliability
@@ -64,8 +85,11 @@ reliability_from_ratio <- function(r, within_sd) {
 #' @export
 breakdown_reliability <- function(beta_star, sigma, tau_star2,
                                   alpha = 0.05, delta = 0.05, psi = 1) {
+  if (!is.finite(sigma) || sigma <= 0) stop("sigma must be positive")
+  if (!is.finite(tau_star2) || tau_star2 <= 0)
+    stop("tau_star2 must be positive")
   if (beta_star == 0) return(0)
-  if (psi <= 0) stop("psi must be positive")
+  if (!is.finite(psi) || psi <= 0) stop("psi must be positive")
   eta_dag <- .eta_dagger(alpha, delta)
   t_star <- abs(beta_star) * sqrt(tau_star2) / (sigma * sqrt(psi))
   t_star / (t_star + eta_dag)
@@ -169,6 +193,10 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
       stop("reliability must be in (0, 1]")
     lambda <- reliability
   } else {
+    if (length(sigma_nu) != 1L && length(sigma_nu) != n)
+      stop("sigma_nu must be scalar or have one value per observation")
+    if (any(!is.finite(sigma_nu)) || any(sigma_nu < 0))
+      stop("sigma_nu must be finite and non-negative")
     s2 <- mean(sigma_nu^2)
     a_hat <- s2 * (n - d_K)
     lambda <- 1 - a_hat / tau_star2
@@ -191,12 +219,45 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
     psi_hat <- 1
   }
 
+  # Assumption ass-cluster and the checkable form of projection compatibility
+  # (lem-nest(b)). Computed whenever a cluster layer is actually in force.
+  cdiag <- NULL
+  if (psi_hat != 1) {
+    cdiag <- cluster_diagnostics(xt, uid, list(unit = uid, time = tid),
+                                 tau_star2 = tau_star2)
+    pcomp <- projection_compatibility(xt, uid, unit, time,
+                                      tau_star2 = tau_star2)
+    cdiag$projection_ratio <- pcomp$ratio
+    cdiag$projection_cells <- pcomp$cells
+    if (cdiag$ratio_ne > 0.20)
+      extra <- c(extra, sprintf(
+        "PROJECTION-COMPATIBILITY SHORTCUT STRAINED: %d fixed effects cut across only %d clusters (d_ne/G = %.3f). This shortcut needs the spectral and energy balance conditions (N1)--(N2); it is not the assumption itself. Nested dimensions here: %s.",
+        cdiag$d_ne, cdiag$G, cdiag$ratio_ne,
+        if (length(cdiag$nested)) paste(cdiag$nested, collapse = ", ") else "none"))
+    if (is.finite(cdiag$projection_ratio))
+      extra <- c(extra, sprintf(
+        "direct projection-compatibility diagnostic chi_proj = %.5f = sum_g ||M a^(g)-a^(g)||^2/tau*2 (Paper B protocol). This finite-panel number evaluates the named sample quantity but does not itself prove the asymptotic sequence condition.",
+        cdiag$projection_ratio))
+    else
+      extra <- c(extra, sprintf(
+        "direct projection-compatibility diagnostic skipped because n*G = %.0f exceeds its allocation guard; call projection_compatibility(..., max_cells=...) deliberately to compute it.",
+        cdiag$projection_cells))
+    if (cdiag$max_energy > 0.10)
+      extra <- c(extra, sprintf(
+        "one cluster carries %.0f%% of the residualized signal (max_g A_g/tau*2): the no-dominant-cluster condition ass-cluster(ii) is strained and the cluster CLT may not apply",
+        100 * cdiag$max_energy))
+    if (cdiag$G < 30)
+      extra <- c(extra, sprintf(
+        "only G = %d clusters: ass-cluster(ii) is a many-clusters condition and the cluster-robust reading is unreliable at this G",
+        cdiag$G))
+  }
+
   design <- structure(list(n = n, N = N, T = T, d_K = d_K, rho = d_K / n,
                            ncomponents = fd$ncomponents, tau_star2 = tau_star2),
                       class = "DesignSummary")
   .eiv_core(design, beta_star, sigma, tau_star2, lambda, alpha = alpha,
             delta = delta, gamma = gamma, pilot = pilot, extra_notes = extra,
-            psi_hat = psi_hat, rho_ar1 = rho_ar1)
+            psi_hat = psi_hat, rho_ar1 = rho_ar1, cluster_diag = cdiag)
 }
 
 #' Module B diagnostic from regression summary output
@@ -233,11 +294,21 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
   pilot <- match.arg(pilot)
   if ((!is.null(reliability)) + (!is.null(sigma_nu2)) != 1L)
     stop("supply exactly one of reliability or sigma_nu2")
+  if (!is.numeric(n) || length(n) != 1L || !is.finite(n) || n <= 0)
+    stop("n must be positive")
+  if (!is.numeric(d_K) || length(d_K) != 1L || !is.finite(d_K) ||
+      d_K < 0 || d_K >= n)
+    stop("d_K must satisfy 0 <= d_K < n")
+  if (!is.finite(sigma) || sigma <= 0) stop("sigma must be positive")
+  if (!is.finite(tau_star2) || tau_star2 <= 0)
+    stop("tau_star2 must be positive")
   lambda <- if (!is.null(reliability)) {
     if (!(reliability > 0 && reliability <= 1))
       stop("reliability must be in (0, 1]")
     reliability
   } else {
+    if (!is.finite(sigma_nu2) || sigma_nu2 < 0)
+      stop("sigma_nu2 must be finite and non-negative")
     1 - sigma_nu2 * (n - d_K) / tau_star2
   }
   design <- structure(list(n = n, N = N, T = T, d_K = d_K, rho = d_K / n,
@@ -251,8 +322,23 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
 
 .eiv_core <- function(design, beta_star, sigma, tau_star2, lambda, alpha,
                       delta, gamma, pilot, extra_notes,
-                      psi_hat = 1, rho_ar1 = NULL) {
-  if (psi_hat <= 0) stop("psi must be positive")
+                      psi_hat = 1, rho_ar1 = NULL, cluster_diag = NULL) {
+  if (!(alpha > 0 && alpha < 1)) stop("alpha must lie in (0, 1)")
+  if (!(delta > 0 && delta < 1 - alpha))
+    stop("delta must lie in (0, 1-alpha)")
+  if (!is.finite(sigma) || sigma <= 0) stop("sigma must be positive")
+  if (!is.finite(tau_star2) || tau_star2 <= 0)
+    stop("tau_star2 must be positive")
+  if (!is.finite(lambda) || lambda > 1)
+    stop("reliability cannot exceed one and must be finite")
+  if (!is.finite(psi_hat) || psi_hat <= 0) stop("psi must be positive")
+  # gamma must leave z_{1-gamma} >= 0 (Paper B, prop-certificate). At
+  # gamma > 1/2 the "upper" bound U_n = |beta0_corr| + z_{1-gamma} se would
+  # DEFLATE the pilot, making the conservative verdict weaker than the point
+  # verdict while still being labelled CERTIFIED.
+  if (!(is.numeric(gamma) && length(gamma) == 1L && is.finite(gamma) &&
+        gamma > 0 && gamma <= 0.5))
+    stop("gamma must be a single number in (0, 0.5]: at gamma > 0.5 the certificate's upper confidence bound deflates rather than inflates the pilot and the verdict is no longer conservative")
   eta_dag <- .eta_dagger(alpha, delta)
   sqpsi <- sqrt(psi_hat)
   notes <- extra_notes
@@ -275,25 +361,36 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
                                notes))
   }
 
+  # Cluster-robust scale (cor-cluster-feasible): s_CR^2 = sigma_CJN^2 * psi =
+  # V^sc_CR / tau*2, an algebraic identity. EVERY scale below is s_CR --
+  # including the pilot standard error. Using the i.i.d. sigma there (as the
+  # pre-correction code did) understates the certificate by sqrt(psi) and is
+  # anti-conservative whenever psi > 1.
+  s_CR <- sigma * sqpsi
+
   beta_corr <- beta_star / lambda
-  se_corr <- sigma / (lambda * sqrt(tau_star2))
+  se_corr <- s_CR / (lambda * sqrt(tau_star2))
   b_pilot <- if (pilot == "naive") abs(beta_star) else abs(beta_corr)
-  eta_point <- (b_pilot / sigma) * (1 - lambda) * sqrt(tau_star2) / sqpsi
+  eta_point <- (b_pilot / s_CR) * (1 - lambda) * sqrt(tau_star2)
   eta_upper <- NULL
   if (pilot == "conservative")
-    eta_upper <- ((abs(beta_corr) + stats::qnorm(1 - gamma) * se_corr) / sigma) *
-      (1 - lambda) * sqrt(tau_star2) / sqpsi
+    eta_upper <- ((abs(beta_corr) + stats::qnorm(1 - gamma) * se_corr) / s_CR) *
+      (1 - lambda) * sqrt(tau_star2)
   eta_used <- if (pilot == "conservative") eta_upper else eta_point
 
-  verdict <- if (eta_used <= eta_dag) "CERTIFIED" else "FLAGGED"
+  # rem-plugin: only the certificate is size-controlled. A passing point pilot
+  # is a POINT PASS, not a certificate.
+  verdict <- if (eta_used <= eta_dag) {
+    if (pilot == "conservative") "CERTIFIED" else "POINT_PASS"
+  } else "FLAGGED"
   implied_size <- .noncentral_size(eta_point, alpha)
 
   if (pilot == "conservative") {
     notes <- c(notes, sprintf(
-      "formal certificate: verdict uses the upper %.0f%% confidence bound of the corrected pilot, |eta|_ub = %.3f (Paper B, protocol step 6); implied size shown is at the point pilot",
-      100 * (1 - gamma), eta_upper))
+      "formal certificate (prop-certificate): the verdict uses U_n = |beta0_corr| + z_{1-gamma} se(beta0_corr), giving |eta|_ub = %.3f, with false-certification probability at most gamma = %.2g. Tolerances are the TRIPLE (alpha, delta, gamma) = (%.2g, %.2g, %.2g) and do not collapse (rem-gamma-delta): delta bounds the size distortion certified, gamma bounds the probability the statement is wrong. Implied size shown is at the point pilot.",
+      eta_upper, gamma, alpha, delta, gamma))
   } else if (pilot == "point") {
-    notes <- c(notes, "point diagnostic (descriptive): corrected pilot at its point estimate \u2014 not a formally size-controlled certificate (Paper B, Remark rem-corr-noise)")
+    notes <- c(notes, "POINT PASS, not a certificate (rem-plugin): the corrected pilot at its point estimate is descriptive. Under weak information eta_hat converges to a nondegenerate random multiple (|B|/|beta0|)|eta| of the target -- median close to it, but no concentration. Its sampling variability is a first-order feature of the regime, not a vanishing approximation error. For a size-controlled statement use pilot = \"conservative\".")
   } else {
     notes <- c(notes, "ANTI-CONSERVATIVE naive pilot (attenuated beta*) \u2014 for comparison only; understates |eta| by the factor lambda (Paper B, Prop. prop-pilot(i))")
   }
@@ -307,23 +404,179 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
       sqrt(lambda)))
   if (psi_hat != 1) {
     dir <- if (psi_hat > 1)
-      "clustering deflates the measured distortion on THIS design; the iid verdict is an upper bound on the alarm"
+      "on THIS design clustering deflates the measured distortion"
     else
-      "clustering WORSENS the distortion on THIS design (psi < 1)"
+      "on THIS design clustering WORSENS the distortion (psi < 1) -- the i.i.d. reading is anti-conservative here"
     notes <- c(notes, sprintf(
-      "cluster-robust standardization: variance-inflation psi_hat = %.3f rescales |eta| and the breakdown by 1/sqrt(psi) = %.3f (Paper B, Remark rem-cluster): %s",
-      psi_hat, 1 / sqpsi, dir))
+      "cluster-robust standardization: psi_hat = %.3f, so the scale is s_CR = sigma*sqrt(psi) = %.4g and |eta|, t* are deflated by 1/sqrt(psi) = %.3f; %s. The sign of psi-1 is not free and not guessable (rem-psi-sign): an equicorrelated component at a level that is itself a fixed effect is annihilated exactly, and a serially dependent error with a within-cluster serially independent regressor gives psi < 1. What pushes psi above one is persistence in the regressor and the error together. Read the direction off psi_hat.",
+      psi_hat, s_CR, 1 / sqpsi, dir))
+    notes <- c(notes, sprintf(
+      "lambda_dagger_CR = %.3f is def-breakdown evaluated at the reported cluster-robust t-statistic t^CR = t*/sqrt(psi) = %.3f -- an algebraic identity (cor-cluster-feasible(c)) requiring no limit theory: the cluster-robust diagnostic IS the i.i.d. diagnostic run on the reported cluster-robust t.",
+      breakdown, t_star / sqpsi))
+    notes <- c(notes, "the CRVE here omits the conventional (n-1)/(n-K) small-sample factor, which converges to 1/(1-rho) rather than 1 and so OVER-corrects when rho is non-negligible (lem-crve). Default software applies it: reproducing psi_hat with such defaults will inflate it by roughly 1/(1-rho).")
   }
 
   statistic <- list(lambda_hat = lambda, noise_ratio = (1 - lambda) / lambda,
                     beta_star = beta_star, beta_corr = beta_corr,
-                    se_beta_corr = se_corr, sigma = sigma, t_star = t_star,
-                    psi_hat = psi_hat,
+                    se_beta_corr = se_corr, sigma = sigma, s_CR = s_CR,
+                    t_star = t_star, t_CR = t_star / sqpsi,
+                    psi_hat = psi_hat, gamma = gamma, pilot = pilot,
                     eta_quad_threshold = .eta_quad(alpha, delta))
   if (!is.null(rho_ar1)) statistic$rho_ar1 <- rho_ar1
+  if (!is.null(cluster_diag)) statistic$cluster <- cluster_diag
   if (!is.null(eta_upper)) statistic$eta_upper <- eta_upper
 
   .new_AdequacyReport("measurement_error", design, statistic, eta_point,
                       eta_dag, breakdown, implied_size, verdict, alpha, delta,
                       notes)
+}
+
+
+#' Checkable conditions behind the cluster-robust layer
+#'
+#' Assumption ass-cluster and Lemma lem-nest of Paper B. All are computable from
+#' the design alone, before any outcome is examined.
+#'
+#' Condition (iv) of ass-cluster -- projection compatibility -- is the one with
+#' no counterpart in the i.i.d. theory, and it fails silently when the fixed
+#' effects cut across clusters in a high-dimensional way.
+#'
+#' Lemma lem-nest(b) bounds it by `varpi_n * max_g A_g`, which is
+#' unconditional. The familiar reduction to `d_ne / G -> 0` is *not*: it holds
+#' only under two balance conditions, which this function reports rather than
+#' assumes.
+#' \itemize{
+#'   \item (N1) spectral: `lambda_min^+(Lambda_n) ~ n / d_ne`. Exact in a
+#'     balanced two-way panel, where `Lambda_n = G (I_T - 11'/T)`, but equal
+#'     cell counts alone do not control the smallest non-zero eigenvalue of the
+#'     residualized Gram matrix. Not computed here.
+#'   \item (N2) energy: `max_g A_g = O(tau*2 / G)`, reported as
+#'     \code{max_energy}. If the residualized signal concentrates in
+#'     `sqrt(G)` clusters then `max_energy ~ G^-1/2` and the requirement
+#'     becomes `d_ne / sqrt(G) -> 0` instead.
+#' }
+#' So read \code{ratio_ne} and \code{max_energy} together: a small
+#' \code{ratio_ne} carries no warrant on its own. When the two disagree, or
+#' when (N1) is in doubt, use [projection_compatibility()], which evaluates
+#' `sum_g ||M a^(g) - a^(g)||^2 / tau*2` directly and needs neither condition.
+#'
+#' In Paper B's V-Dem application country effects nest in country clusters
+#' while the 59 year effects do not, against `G = 163`, so `ratio_ne ~ 0.36`;
+#' in the PSID application person effects nest and the 7 year effects do not,
+#' against `G = 595`, giving `ratio_ne ~ 0.012`. Those two cluster-robust
+#' readings do not carry the same warrant.
+#'
+#' @param xt residualized regressor.
+#' @param cluster cluster identifier, one per observation.
+#' @param fe_levels named list of fixed-effect id vectors, one per FE dimension.
+#' @param tau_star2 the within variation `x*'M x*`.
+#' @return A list with `G`, `max_size`, `min_size`, `max_energy`, `d_ne`,
+#'   `ratio_ne` and `nested`.
+#' @export
+cluster_diagnostics <- function(xt, cluster, fe_levels, tau_star2) {
+  n <- length(xt)
+  if (length(cluster) != n) stop("cluster must have the same length as the data")
+  cid <- as.integer(factor(cluster, levels = unique(cluster)))
+  G <- max(cid)
+  sizes <- tabulate(cid, nbins = G)
+  energy <- vapply(seq_len(G), function(g) sum(xt[cid == g]^2), numeric(1))
+
+  nested <- character(0)
+  d_ne <- 0L
+  for (nm in names(fe_levels)) {
+    ids <- fe_levels[[nm]]
+    if (length(ids) != n)
+      stop(sprintf("fixed-effect ids for %s must have length n", nm))
+    f <- as.integer(factor(ids, levels = unique(ids)))
+    # nested iff every level of this FE dimension sits in exactly one cluster
+    per <- tapply(cid, f, function(v) length(unique(v)))
+    if (all(per == 1L)) {
+      nested <- c(nested, nm)
+    } else {
+      d_ne <- d_ne + length(unique(f))
+    }
+  }
+
+  list(G = G, max_size = max(sizes), min_size = min(sizes),
+       max_energy = max(energy) / tau_star2,
+       d_ne = d_ne, ratio_ne = d_ne / G, nested = nested)
+}
+
+#' Projection compatibility, evaluated directly
+#'
+#' Assumption ass-cluster(iv) of Paper B asks that
+#' \eqn{\sum_g \|M a^{(g)} - a^{(g)}\|^2 = o_p(\tau^{*2})}, where
+#' \eqn{a^{(g)}} is the residualized regressor restricted to cluster \eqn{g}.
+#' This function computes that ratio as it stands, for a two-way (unit and
+#' time) fixed-effect design.
+#'
+#' Unlike the \code{ratio_ne} shortcut in [cluster_diagnostics()], this needs
+#' neither of the balance conditions (N1) and (N2) of Lemma lem-nest(b): it is
+#' the quantity the assumption actually names. Use it when \code{ratio_ne} and
+#' \code{max_energy} point in different directions, when the panel is far from
+#' balanced, or whenever the cluster-robust column is load-bearing.
+#'
+#' Under Lemma lem-nest(a) the ratio is exactly zero when every fixed-effect
+#' cell sits inside one cluster, so a non-zero value is entirely the work of
+#' the fixed effects that cut across clusters.
+#'
+#' Cost is one alternating-projection sweep over an \code{n * G} matrix. The
+#' \code{max_cells} guard returns \code{NA} rather than allocating a matrix
+#' larger than that; raise it deliberately if you want the number anyway.
+#'
+#' @param xt residualized regressor (the same \code{M x*} used elsewhere).
+#' @param cluster cluster identifier, one per observation.
+#' @param unit,time raw fixed-effect identifiers, one per observation.
+#' @param tau_star2 the within variation \code{sum(xt^2)}; defaults to
+#'   \code{sum(xt^2)}.
+#' @param tol,maxit convergence controls for the alternating projections.
+#' @param max_cells refuse to allocate more than this many matrix cells.
+#' @return A list with `ratio` (the quantity above; `NA` if the guard tripped),
+#'   `G`, `n` and `cells`.
+#' @examples
+#' n <- 200; unit <- rep(1:20, each = 10); time <- rep(1:10, times = 20)
+#' x <- rnorm(n)
+#' xt <- twoway_demean(x, unit, time)
+#' # unit FE nest in unit clusters, the 10 time effects do not
+#' projection_compatibility(xt, unit, unit, time)$ratio
+#' @export
+projection_compatibility <- function(xt, cluster, unit, time,
+                                     tau_star2 = sum(xt^2),
+                                     tol = 1e-10, maxit = 10000L,
+                                     max_cells = 5e6) {
+  xt <- as.numeric(xt)
+  n <- length(xt)
+  if (length(cluster) != n || length(unit) != n || length(time) != n)
+    stop("xt, cluster, unit and time must have equal length")
+  if (!(tau_star2 > 0)) stop("tau_star2 must be positive")
+
+  cid <- as.integer(factor(cluster, levels = unique(cluster)))
+  G <- max(cid)
+  cells <- as.numeric(n) * G
+  if (cells > max_cells)
+    return(list(ratio = NA_real_, G = G, n = n, cells = cells))
+
+  cc <- .integer_codes(unit, time)
+  uid <- cc$uid; tid <- cc$tid; N <- cc$N; T <- cc$T
+  ucnt <- pmax(tabulate(uid, N), 1L)
+  tcnt <- pmax(tabulate(tid, T), 1L)
+
+  # columns of A are the cluster loading vectors a^(g)
+  A <- matrix(0, n, G)
+  A[cbind(seq_len(n), cid)] <- xt
+
+  W <- A
+  converged <- FALSE
+  for (it in seq_len(maxit)) {
+    um <- rowsum(W, uid) / ucnt
+    W <- W - um[uid, , drop = FALSE]
+    tm <- rowsum(W, tid) / tcnt
+    delta <- max(abs(tm))
+    W <- W - tm[tid, , drop = FALSE]
+    if (delta < tol) { converged <- TRUE; break }
+  }
+  if (!converged) warning("two-way demeaning did not converge within maxit")
+
+  # W is M A, so A - W is P A and sum((A - W)^2) = sum_g ||M a^(g) - a^(g)||^2
+  list(ratio = sum((A - W)^2) / tau_star2, G = G, n = n, cells = cells)
 }

@@ -64,9 +64,50 @@ twoway_demean <- function(x, unit, time, tol = 1e-10, maxit = 10000L) {
   .twoway_demean_codes(x, cc$uid, cc$tid, cc$N, cc$T, tol = tol, maxit = maxit)
 }
 
+#' Multiway within transformation by alternating projections
+#'
+#' Scalable residualization for applications with more than two categorical
+#' fixed-effect dimensions, including Paper A's worker--firm--year design.
+#'
+#' @param x numeric vector to residualize.
+#' @param fe_levels list of fixed-effect identifier vectors.
+#' @param tol,maxit convergence controls.
+#' @return the residualized numeric vector.
+#' @export
+multiway_demean <- function(x, fe_levels, tol = 1e-10, maxit = 10000L) {
+  x <- as.numeric(x)
+  n <- length(x)
+  if (!is.list(fe_levels) || !length(fe_levels))
+    stop("fe_levels must be a non-empty list of id vectors")
+  if (!(tol > 0)) stop("tol must be positive")
+  if (maxit < 1L) stop("maxit must be positive")
+  codes <- lapply(seq_along(fe_levels), function(j) {
+    ids <- fe_levels[[j]]
+    if (length(ids) != n)
+      stop(sprintf("fixed-effect dimension %d has length %d; expected %d",
+                   j, length(ids), n))
+    match(ids, unique(ids))
+  })
+  counts <- lapply(codes, function(z) pmax(tabulate(z, max(z)), 1L))
+  w <- x
+  converged <- FALSE
+  for (it in seq_len(maxit)) {
+    max_update <- 0
+    for (j in seq_along(codes)) {
+      z <- codes[[j]]
+      m <- rowsum(w, z)[, 1L] / counts[[j]]
+      max_update <- max(max_update, max(abs(m)))
+      w <- w - m[z]
+    }
+    if (max_update < tol) { converged <- TRUE; break }
+  }
+  if (!converged) warning("multiway demeaning did not converge within maxit")
+  w
+}
+
 #' Design-summary primitive (spec section 2.1)
 #'
-#' Pre-outcome design description reused by all three diagnostic modules and
+#' Pre-outcome design description reused by all four inference/diagnostic modules and
 #' useful standalone: n, N, T, the fixed-effect dimension `d_K` via union-find,
 #' `rho = d_K/n`, and (if a regressor is supplied) its within residual
 #' variation `tau_star2 = x' M x`.

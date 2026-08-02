@@ -1,8 +1,8 @@
-# Module A \u2014 leverage / variance diagnostics (spec section 3; Paper A).
+# Leverage / variance diagnostics for the diffuse-regime companion paper.
 # Formula sources: full-regression leverage H_ii = (P_K)_ii + Xt_i^2/(X'MX)
 # (eq. 2.3); HC0-HC3 weights (section 3.2); asymptotic sizes (Thm 3.1, Cor 3.1);
-# HC3 over-correction regime rho > 0.1 (section 6); HC1-vs-LO divergence under
-# non-uniform leverage (Remark 3.4).
+# HC3 over-correction regime rho > 0.1 (section 6); and the failure of scalar
+# degrees-of-freedom corrections under non-uniform leverage.
 
 #' Diagonal of the two-way fixed-effect projection
 #'
@@ -35,7 +35,7 @@ fe_leverage <- function(unit, time) {
 #' Module A diagnostic: variance-estimator adequacy under FE saturation
 #'
 #' Reproduces the user's FE regression of `y` on `x` with unit and time fixed
-#' effects via Frisch-Waugh (never re-specified), then reports the naive / CJN /
+#' effects via Frisch-Waugh (never re-specified), then reports the naive / df-corrected /
 #' HC0-HC3 variance hierarchy, the leverage diagnostics, and whether the
 #' variance-estimator choice materially changes inference at tolerance `delta`.
 #'
@@ -55,8 +55,8 @@ fe_leverage <- function(unit, time) {
 #' @param delta size-distortion tolerance
 #' @param ... passed between methods
 #' @return an object of class \code{AdequacyReport}
-#' @references Halkiewicz, S. M. S. Variance estimation for saturated
-#'   fixed-effect specifications (Paper A).
+#' @references Halkiewicz, S. M. S. Corrected diffuse-regime variance
+#'   framework for saturated fixed-effect specifications.
 #' @examples
 #' n <- 200; unit <- rep(1:20, each = 10); time <- rep(1:10, times = 20)
 #' x <- rnorm(n); y <- 0.5 * x + rnorm(n)
@@ -94,7 +94,7 @@ leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
   maxH <- max(H)
   if (maxH >= 1 - 1e-10)
     stop("an observation has full leverage H_ii = 1; HC2/HC3 are undefined ",
-         "(degenerate cell \u2014 Paper A's bounded-leverage condition fails)")
+         "(degenerate cell \u2014 the diffuse framework's bounded-leverage condition fails)")
 
   hc0 <- sum(xt^2 * u^2)
   hc1 <- n / dof * hc0
@@ -102,7 +102,7 @@ leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
   hc3 <- sum(xt^2 * u^2 / (1 - H)^2)
 
   se_naive <- sqrt(rss / n / tau_star2)
-  se_cjn   <- sqrt(rss / dof / tau_star2)
+  se_df    <- sqrt(rss / dof / tau_star2)
   se_hc0   <- sqrt(hc0) / tau_star2
   se_hc1   <- sqrt(hc1) / tau_star2
   se_hc2   <- sqrt(hc2) / tau_star2
@@ -110,45 +110,74 @@ leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
 
   rho <- d_K / n
   z <- stats::qnorm(1 - alpha / 2)
-  size_hc0 <- .size_hc0(rho, alpha)
+  size_naive <- .size_naive(rho, alpha)
   size_hc3 <- .size_hc3(rho, alpha)
   rho_dag <- .rho_dagger(alpha, delta)
 
-  sig <- abs(beta / c(se_cjn, se_hc0, se_hc1, se_hc2, se_hc3)) > z
+  sig <- abs(beta / c(se_df, se_hc0, se_hc1, se_hc2, se_hc3)) > z
   flip <- any(sig != sig[1])
 
   notes <- c(
-    "leave-one-out (HC2) is the recommended default for saturated FE (Paper A, Remark 3.6)",
-    "implied sizes use the homoskedastic / design-balanced limits of Theorem 3.3 (sigma_eff^2 = omega^2)"
+    "HC2 is the recommended default among the HC0--HC3 estimators reported here; it is leverage-adjusted but is not the Kline--Saggio--Solvsten leave-out estimator",
+    "implied sizes are the conditional-homoskedastic limits of thm:hc (omega_eff^2 = sigma^2); under heteroskedasticity the HCc limits carry the extra factor omega^2/omega_eff^2, omega_eff^2 = (1-rho) omega^2 + rho mu"
   )
   if (rho > 0.1)
     notes <- c(notes, sprintf(
-      "HC3 over-correcting regime (rho = %.3f > 0.1): HC3 intervals are artificially conservative (implied size %.1f%%) \u2014 re-run with HC2/LO (Paper A \u00a76)",
+      "HC3 over-correcting regime (rho = %.3f > 0.1): HC3 intervals are artificially conservative (implied size %.1f%%); HC2 is the preferred member of the HC0--HC3 family reported here",
       rho, 100 * size_hc3))
   spread <- maxH / min(H)
   if (spread > 2)
     notes <- c(notes, sprintf(
-      "leverage non-uniform (hmax/hmin = %.2f): HC1 is unreliable here; prefer HC2/LO (Paper A, Remark 3.4)",
+      "leverage non-uniform (hmax/hmin = %.2f): HC1 is unreliable here; prefer a leverage-adjusted estimator such as HC2, or a separately implemented leave-out estimator",
       spread))
   if (flip)
-    notes <- c(notes, "significance at level alpha flips across variance estimators \u2014 inference is estimator-dependent; use HC2/LO")
-  max_x_share <- max(xt^2) / tau_star2
-  if (max_x_share > 0.1)
+    notes <- c(notes, "significance at level alpha flips across variance estimators; inference is estimator-dependent, and HC2 is the preferred member of the estimators reported here")
+  # the two design conditions the corrected theory actually uses
+  lambda_n <- max(xt^2) / tau_star2                 # ass:des(ii)
+  n_eff <- 1 / sum((xt^2 / tau_star2)^2)
+  unif_gap <- max(abs(H - rho))                     # ass:hc(ii)
+  Q_hat <- tau_star2 / (n * (1 - rho))              # lem:hess(b) deflation
+  notes <- c(notes, sprintf(
+    "sample Hessian V_n = %.6g estimates (1-rho) n Qbar, not n Qbar (lem:hess(b)); the deflation-corrected primitive is Qhat = V_n/(n(1-rho)) = %.6g",
+    tau_star2, Q_hat))
+  lam_bad <- lambda_n > 0.10
+  if (lam_bad)
     notes <- c(notes, sprintf(
-      "treatment leverage-ratio condition strained: one observation carries %.0f%% of the within variation",
-      100 * max_x_share))
-
-  verdict <- if (size_hc0 - alpha > delta || flip) "FLAGGED" else "CERTIFIED"
+      "CONCENTRATION WARNING: lambda_n = max_i Xt_i^2/V_n = %.3f does not look negligible (N_eff = %.1f). The Gaussian limit requires lambda_n -> 0. Along persistently concentrated sequences the limit is not fixed across error distributions, and at the fully concentrated boundary no fixed distribution-free critical value is uniformly valid; use the exact contrast test (cycle_report, Paper A) instead.",
+      lambda_n, n_eff))
+  unif_bad <- unif_gap > 0.25
+  if (unif_bad)
+    notes <- c(notes, sprintf(
+      "uniform-leverage condition strained: max_i |H_ii - rho| = %.3f (rho = %.3f). The HC limits of thm:hc are derived under approximate balance; unbalanced bipartite designs are the leave-out literature's territory, not this module's.",
+      unif_gap, rho))
+  verdict <- if (size_naive - alpha > delta || flip || lam_bad || unif_bad)
+    "FLAGGED" else "CERTIFIED"
 
   design <- structure(list(n = n, N = N, T = T, d_K = d_K, rho = rho,
                            ncomponents = fd$ncomponents, tau_star2 = tau_star2),
                       class = "DesignSummary")
-  statistic <- list(beta = beta, se_naive = se_naive, se_cjn = se_cjn,
+  score_mass <- sum(xt^2 * u^2)
+  if (score_mass > 0) {
+    score_share <- xt^2 * u^2 / score_mass
+    score_lambda_n <- max(score_share)
+    score_H_n <- sum(score_share^2)
+    score_n_eff <- 1 / score_H_n
+    notes <- c(notes, sprintf(
+      "realized score diagnostic (Paper A): lambda_score = %.4f, N_eff,score = %.1f. This is a one-realization warning statistic, not by itself a consistent population concentration estimate.",
+      score_lambda_n, score_n_eff))
+  } else {
+    score_lambda_n <- score_H_n <- score_n_eff <- NA_real_
+  }
+  statistic <- list(beta = beta, se_naive = se_naive, se_df = se_df,
                     se_hc0 = se_hc0, se_hc1 = se_hc1, se_hc2 = se_hc2,
                     se_hc3 = se_hc3, t_hc2 = beta / se_hc2,
                     max_leverage = maxH, max_fe_leverage = max(p_fe),
-                    leverage_spread = spread, max_x_share = max_x_share,
+                    leverage_spread = spread, lambda_n = lambda_n,
+                    n_eff = n_eff, uniform_leverage_gap = unif_gap,
+                    score_lambda_n = score_lambda_n, score_H_n = score_H_n,
+                    score_n_eff = score_n_eff,
+                    V_n = tau_star2, Q_hat = Q_hat,
                     implied_size_hc3 = size_hc3)
   .new_AdequacyReport("leverage", design, statistic, NULL, NULL, rho_dag,
-                      size_hc0, verdict, alpha, delta, notes)
+                      size_naive, verdict, alpha, delta, notes)
 }

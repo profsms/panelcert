@@ -5,7 +5,7 @@
 \alias{twfe_adequacy.plm}
 \alias{twfe_adequacy}
 \alias{twfe_adequacy.default}
-\title{Module C inference layer: TWFE-heterogeneity adequacy}
+\title{TWFE-heterogeneity adequacy (covariance-aware, wild-bootstrap)}
 \usage{
 \method{twfe_adequacy}{fixest}(object, first_treat, ...)
 
@@ -22,55 +22,36 @@ twfe_adequacy(object, ...)
   delta = 0.05,
   cluster = c("ar1", "iid"),
   psi = NULL,
-  cohort_effects = NULL,
-  cohort_ses = NULL,
+  bootstrap = 999L,
+  seed = 20260715L,
   ...
 )
 }
 \arguments{
-\item{object}{outcome vector (default method), or a fitted \code{fixest} /
-\code{plm} / \code{lm} TWFE model of the outcome on the treatment dummy}
+\item{object}{outcome vector}
 
 \item{...}{passed between methods}
 
-\item{unit, time, first_treat}{as in [twfe_design()]; for the model methods,
-\code{first_treat} must align with the ESTIMATION sample (same length and
-order as the data the model was fitted on, after any dropped rows)}
+\item{unit, time, first_treat}{as in [twfe_design()]}
 
-\item{alpha}{nominal test level}
+\item{alpha, delta}{level and size tolerance}
 
-\item{delta}{size-distortion tolerance}
+\item{cluster}{"ar1" (default) or "iid"}
 
-\item{cluster}{\code{"ar1"} (default; Paper C's parametric route) or
-\code{"iid"}}
+\item{psi}{optional user-supplied variance-inflation factor}
 
-\item{psi}{optional user-supplied variance-inflation factor (overrides
-\code{cluster})}
+\item{bootstrap}{number of wild-cluster draws (>0 enables the covariance
+correction and the size intervals)}
 
-\item{cohort_effects, cohort_ses}{optional cohort-level effect estimates
-(aligned with the SORTED adoption times) from a heterogeneity-robust
-estimator (did / csdid / fixest::sunab). If omitted, an internal
-order-of-magnitude pilot is used and labelled as such.}
+\item{seed}{RNG seed for the wild bootstrap}
 }
 \value{
-an object of class \code{AdequacyReport}
+an \code{AdequacyReport}
 }
 \description{
-Realized and worst-case non-centrality of the TWFE t-test under
-treatment-effect heterogeneity, with the SHRINKAGE-CORRECTED
-cohort-dispersion pilot (Paper C eq-shrink) and the cluster-robust rescaling
-`Gamma_CR = Gamma/sqrt(psi_hat)`, `psi_hat` computed on the realized design
-(no direction assumed).
-}
-\examples{
-N <- 30; T <- 8
-unit <- rep(1:N, each = T); time <- rep(1:T, times = N)
-ft <- ifelse(unit <= 8, 3, ifelse(unit <= 16, 6, NA))
-y <- rnorm(N * T) + 0.5 * as.numeric(!is.na(ft) & time >= ft)
-twfe_adequacy(y, unit, time, ft)
-}
-\references{
-Halkiewicz, S. M. S. Stock--Yogo critical values for the
-  two-way fixed-effects t-test under treatment-effect heterogeneity
-  (Paper C).
+Restricted design-statistic ladder, cluster-robust rescaling
+\code{Gamma_{S,CR} = Gamma_S/sqrt(psi)}, covariance-aware pilots
+\code{c_S/sigma} (eq-pilot; Omega from a fixed-design wild cluster bootstrap),
+the combined-class worst-case implied size (headline) with its bootstrap
+median and interval, and the verdict. Always-treated units are dropped.
 }

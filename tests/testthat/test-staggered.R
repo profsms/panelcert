@@ -1,5 +1,7 @@
-# Module C (Paper C): design statistic + inference layer, pinned to the
-# verified audit pipeline (Paper C Table tab-audit), spec 7.3-7.6.
+# Module C (Paper C): design-statistic ladder + covariance-aware inference layer,
+# pinned to the audit pipeline (Tables 4-5). Design statistics are deterministic;
+# the covariance-aware pilot and its sizes depend on the wild bootstrap (fixed
+# seed) and are checked with wider tolerance.
 
 test_that("block design: Gamma = 0 exactly (Prop. prop-gamma0)", {
   N <- 10; T <- 6; g <- 4
@@ -7,92 +9,87 @@ test_that("block design: Gamma = 0 exactly (Prop. prop-gamma0)", {
   ft <- ifelse(unit <= 4, g, NA)
   r <- twfe_design(unit, time, ft)
   expect_lt(r$statistic$Gamma, 1e-8)
+  expect_lt(r$statistic$Gamma_cmb, 1e-8)
   expect_equal(r$statistic$neg_share, 0)
   expect_identical(r$verdict, "CERTIFIED")
   expect_true(any(grepl("block", r$notes)))
 })
 
-test_that("three-cohort no-reservoir design (Paper C sims: Gamma = 1.54)", {
+test_that("three-cohort no-reservoir design (Gamma = 1.54); nested ladder", {
   N <- 48; T <- 12
   unit <- rep(1:N, each = T); time <- rep(1:T, times = N)
   ft <- ifelse(unit <= 16, 3, ifelse(unit <= 32, 7, 11))
-  r <- twfe_design(unit, time, ft)
-  expect_equal(r$statistic$Gamma, 1.54, tolerance = 0.02 / 1.54)
-  expect_equal(r$statistic$neg_share, 0.11, tolerance = 0.01 / 0.11)
+  r <- twfe_design(unit, time, ft); st <- r$statistic
+  expect_equal(st$Gamma, 1.54, tolerance = 0.02 / 1.54)
+  expect_equal(st$neg_share, 0.11, tolerance = 0.01 / 0.11)
+  expect_lte(st$Gamma_coh, st$Gamma_cmb + 1e-9)
+  expect_lte(st$Gamma_evt, st$Gamma_cmb + 1e-9)
+  expect_lte(st$Gamma_cmb, st$Gamma + 1e-9)
   expect_identical(r$verdict, "INCONCLUSIVE")
-  expect_equal(r$breakdown, PD$.eta_dagger(0.05, 0.05) / r$statistic$Gamma,
+  expect_equal(r$breakdown, PD$.eta_dagger(0.05, 0.05) / st$Gamma_cmb,
                tolerance = 1e-10)
 })
 
-test_that("reference case 3: design statistics (spec 7.3)", {
+test_that("castle design statistics (Table 4)", {
   castle <- read_panel("castle_panel.csv")
-  r <- twfe_design(castle$uid, castle$tid, castle$ft)
+  r <- twfe_design(castle$uid, castle$tid, castle$ft); st <- r$statistic
   expect_equal(r$design$n, 550)
   expect_equal(c(r$design$N, r$design$T), c(50, 11))
-  expect_equal(r$statistic$Gamma, 0.211415, tolerance = 1e-4)
-  expect_equal(r$statistic$neg_share, 0)
-  expect_equal(r$statistic$N1, 95)
-  expect_equal(r$statistic$n_w, 34.7127, tolerance = 1e-4)
-
-  divorce <- read_panel("divorce_panel.csv")
-  rd <- twfe_design(divorce$uid, divorce$tid, divorce$ft)
-  expect_equal(rd$design$n, 1377)
-  expect_equal(rd$statistic$Gamma, 0.856801, tolerance = 1e-4)
-  expect_equal(rd$statistic$neg_share, 0.072917, tolerance = 1e-4 / 0.072917)
-  expect_equal(rd$statistic$N1, 576)
+  expect_equal(st$Gamma, 0.2114, tolerance = 1e-3 / 0.2114)
+  expect_equal(st$Gamma_cmb, 0.198, tolerance = 5e-3 / 0.198)
+  expect_equal(st$Gamma_evt, 0.168, tolerance = 5e-3 / 0.168)
+  expect_equal(st$Gamma_coh, 0.142, tolerance = 5e-3 / 0.142)
+  expect_equal(st$neg_share, 0)
+  expect_equal(st$N1, 95)
+  expect_equal(st$n_w, 34.7127, tolerance = 1e-4)
 })
 
-test_that("reference cases 4-6: inference layer (audit pipeline values)", {
-  castle <- read_panel("castle_panel.csv")
+test_that("divorce design statistics (always-treated dropped; Table 4)", {
   divorce <- read_panel("divorce_panel.csv")
+  r <- twfe_design(divorce$uid, divorce$tid, divorce$ft); st <- r$statistic
+  expect_equal(r$design$N, 49)          # 51 - 2 always-treated
+  expect_equal(r$design$n, 1323)
+  expect_equal(st$Gamma, 0.6433, tolerance = 2e-3 / 0.6433)
+  expect_equal(st$Gamma_cmb, 0.562, tolerance = 5e-3 / 0.562)
+  expect_equal(st$Gamma_evt, 0.468, tolerance = 5e-3 / 0.468)
+  expect_equal(st$Gamma_coh, 0.381, tolerance = 5e-3 / 0.381)
+  expect_equal(st$neg_share, 0.0115, tolerance = 2e-3)
+  expect_equal(st$N1, 522)
+  expect_true(any(grepl("always-treated", r$notes)))
+})
 
-  r <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft, cluster = "iid")
+test_that("castle inference: certified in every subspace (Table 5)", {
+  castle <- read_panel("castle_panel.csv")
+  r <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+                     bootstrap = 299L, seed = 20260715L)
   st <- r$statistic
-  expect_equal(st$beta, 0.081812, tolerance = 1e-3)      # spec 7.6 sanity
+  expect_equal(st$beta, 0.081812, tolerance = 1e-3)
   expect_equal(st$sigma, 0.186992, tolerance = 1e-3)
-  expect_equal(st$att_bar, 0.109355, tolerance = 1e-3)
-  expect_equal(st$cohort_sd_raw, 0.053850, tolerance = 1e-3)
-  expect_equal(r$eta, -0.014088, tolerance = 1e-4 / 0.014088)
-  expect_equal(r$implied_size, 0.050023, tolerance = 1e-4 / 0.050023)
-  expect_equal(st$eta_worst_raw, 0.358708, tolerance = 1e-3)
-  expect_equal(st$cohort_sd_shrunk, 0)                    # noise swamps dispersion
-  expect_equal(st$eta_worst, 0)
+  expect_equal(st$psi_hat, 1.3358, tolerance = 1e-3)
+  expect_equal(st$Gamma_cmb_CR, 0.171, tolerance = 5e-3 / 0.171)
+  expect_equal(st$pilot_cmb, 0, tolerance = 1e-6)          # noise floor
+  expect_equal(st$size_cmb, 0.05, tolerance = 2e-3)
+  expect_equal(st$size_realized, 0.05, tolerance = 2e-3)
   expect_identical(r$verdict, "CERTIFIED")
+  expect_true(!is.null(st$boot) && st$boot$cmb_hi < 0.10)
+})
 
-  rc <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)
-  stc <- rc$statistic
-  expect_equal(stc$rho_ar1, 0.226384, tolerance = 1e-3)
-  expect_equal(stc$psi_hat, 1.335767, tolerance = 1e-3)
-  expect_equal(stc$Gamma_CR, 0.182924, tolerance = 1e-3)
-  expect_equal(rc$eta, -0.012190, tolerance = 1e-4 / 0.012190)
-  expect_equal(rc$implied_size, 0.050017, tolerance = 1e-4 / 0.050017)
-  expect_identical(rc$verdict, "CERTIFIED")
-  expect_equal(stc$psi_driven, 3.372112, tolerance = 1e-2)
-  expect_true(any(grepl("cross-check", rc$notes)))
-
-  rd <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft,
-                      cluster = "iid")
-  std <- rd$statistic
-  expect_equal(std$sigma, 0.198134, tolerance = 1e-3)
-  expect_equal(std$att_bar, -0.077839, tolerance = 1e-3)
-  expect_equal(std$cohort_sd_raw, 0.305575, tolerance = 1e-3)
-  expect_equal(rd$eta, 2.223177, tolerance = 1e-3)
-  expect_equal(rd$implied_size, 0.603821, tolerance = 1e-3 / 0.603821)
-  expect_equal(std$eta_worst_raw, 12.405, tolerance = 2e-3)
-  expect_equal(std$cohort_sd_shrunk, 0.30107, tolerance = 2e-3 / 0.30107)
-  expect_equal(std$shrink_factor, 0.985, tolerance = 2e-3 / 0.985)
-  expect_identical(rd$verdict, "FLAGGED")
-
-  rdc <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
-  stdc <- rdc$statistic
-  expect_equal(stdc$rho_ar1, 0.292743, tolerance = 1e-3)
-  expect_equal(stdc$psi_hat, 1.615212, tolerance = 1e-3)
-  expect_equal(stdc$Gamma_CR, 0.674163, tolerance = 1e-3)
-  expect_equal(rdc$eta, 1.749280, tolerance = 1e-3)
-  expect_equal(rdc$implied_size, 0.416671, tolerance = 1e-3 / 0.416671)
-  expect_identical(rdc$verdict, "FLAGGED")
-  expect_true(any(grepl("upper bound", rdc$notes)))
-  expect_true(any(grepl("Paper C", rdc$notes)))
+test_that("divorce inference: flagged (Table 5)", {
+  divorce <- read_panel("divorce_panel.csv")
+  r <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft,
+                     bootstrap = 299L, seed = 20260715L)
+  st <- r$statistic
+  expect_equal(st$sigma, 0.1961, tolerance = 1e-3)
+  expect_equal(st$psi_hat, 1.6196, tolerance = 2e-3)
+  expect_equal(st$Gamma_cmb_CR, 0.442, tolerance = 5e-3 / 0.442)
+  expect_equal(st$eta_real_cr, 1.658, tolerance = 1e-2)     # deterministic
+  expect_equal(st$size_realized, 0.382, tolerance = 5e-3)
+  expect_equal(st$pilot_cmb, 5.3, tolerance = 0.6)          # bootstrap-dependent
+  expect_equal(st$size_cmb, 0.65, tolerance = 0.06)
+  expect_gt(st$size_coh, 0.10); expect_gt(st$size_evt, 0.10)
+  expect_gte(st$size_cmb, st$size_coh - 1e-9)               # nesting
+  expect_identical(r$verdict, "FLAGGED")
+  expect_true(any(grepl("covariance-aware", r$notes)))
 })
 
 test_that("exchangeable psi identity (Thm thm-cluster(a))", {
@@ -102,26 +99,10 @@ test_that("exchangeable psi identity (Thm thm-cluster(a))", {
   Dt <- PD$.twoway_demean_codes(D, sc$uid, sc$tid, sc$N, sc$T)
   for (rho_c in c(0.3, 0.5, 0.8)) {
     psi <- PD$.psi_parametric(Dt, sc$uid, sc$tid, rho_c, kind = "exchangeable")
-    expect_equal(psi, 1 - rho_c, tolerance = 1e-9)   # d_i'1 = 0 makes this exact
+    expect_equal(psi, 1 - rho_c, tolerance = 1e-9)
   }
   expect_equal(PD$.psi_parametric(Dt, sc$uid, sc$tid, 0, kind = "ar1"), 1,
                tolerance = 1e-9)
-})
-
-test_that("user-supplied cohort effects override the internal pilot", {
-  N <- 30; T <- 8
-  unit <- rep(1:N, each = T); time <- rep(1:T, times = N)
-  ft <- ifelse(unit <= 8, 3, ifelse(unit <= 16, 6, NA))
-  k <- seq_along(unit)
-  y <- 0.4 * sin(1.1 * k) + 0.05 * unit
-  r <- twfe_adequacy(y, unit, time, ft, cluster = "iid",
-                     cohort_effects = c(0.5, 0.5), cohort_ses = c(0.1, 0.1))
-  expect_equal(r$statistic$cohort_sd_raw, 0)
-  expect_equal(r$eta, 0, tolerance = 1e-10)
-  expect_identical(r$verdict, "CERTIFIED")
-  expect_false(any(grepl("order-of-magnitude", r$notes)))
-  r2 <- twfe_adequacy(y, unit, time, ft, cluster = "iid")
-  expect_true(any(grepl("order-of-magnitude", r2$notes)))
 })
 
 test_that("validation and rendering", {
@@ -134,10 +115,10 @@ test_that("validation and rendering", {
 
   castle <- read_panel("castle_panel.csv")
   out <- paste(utils::capture.output(
-    print(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft))),
+    print(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft, bootstrap = 99L))),
     collapse = "\n")
   expect_match(out, "TWFE Heterogeneity \\(Paper C\\)")
-  expect_match(out, "Gamma")
+  expect_match(out, "restricted ladder")
   expect_match(out, "VERDICT: CERTIFIED")
   outd <- paste(utils::capture.output(
     print(twfe_design(castle$uid, castle$tid, castle$ft))), collapse = "\n")

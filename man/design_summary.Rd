@@ -15,7 +15,7 @@ design_summary(unit, time, x = NULL)
 object of class \code{DesignSummary}
 }
 \description{
-Pre-outcome design description reused by all three diagnostic modules and
+Pre-outcome design description reused by all four inference/diagnostic modules and
 useful standalone: n, N, T, the fixed-effect dimension `d_K` via union-find,
 `rho = d_K/n`, and (if a regressor is supplied) its within residual
 variation `tau_star2 = x' M x`.

@@ -37,11 +37,11 @@ test_that("the paper applications run straight off the bundled data", {
   rc <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
   expect_identical(rc$verdict, "FLAGGED")
 
-  # Paper A leverage application, verbatim from the dataset (preferred log spec)
+  # Diffuse-regime companion application, verbatim from the dataset.
   ra <- leverage_report(log1p(fscore$ret), fscore$fscore, fscore$uid, fscore$year)
   expect_equal(ra$design$n, 217L)
   expect_equal(round(ra$statistic$beta, 5), -0.00147)   # paper -0.00147
-  expect_equal(round(ra$statistic$se_hc2, 4), 0.0153)   # LO SE, paper 0.0153
+  expect_equal(round(ra$statistic$se_hc2, 4), 0.0153)   # HC2 SE, paper 0.0153
   expect_equal(round(ra$design$tau_star2), 559)         # pooled tau^2 ~ 559
   mE <- fscore$country == "Poland"                       # Spec E headline |t|
   re <- leverage_report(log1p(fscore$ret[mE]), fscore$fscore[mE],

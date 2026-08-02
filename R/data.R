@@ -92,17 +92,10 @@
 #'
 #' Hand-collected firm--year panel of Piotroski F-Scores and one-year-ahead
 #' returns for firms on the Warsaw, Budapest and Prague exchanges, 2010--2024,
-#' consolidated from the three exchange production files. Paper A uses it to
-#' show that under fixed-effect saturation the leverage-sensitive variance
-#' estimators (HC0, HC3) diverge from the leave-one-out (HC2/LO) recommendation
-#' along the predicted \code{sqrt(1 - rho)} / \code{1/sqrt(1 - rho)} ratios,
-#' while every specification leaves the F-Score coefficient indistinguishable
-#' from zero. The seven Table 2 specifications are recovered from this object by
-#' choosing the outcome and subset: arithmetic return (\code{ret}); the
-#' preferred log return (\code{log1p(ret)}); its 1/99 winsorization; the binary
-#' regressor \code{as.numeric(fscore >= 7)}; the Poland-only subset; the
-#' active-only subset (\code{status == "active"}); and country-year fixed
-#' effects (pass \code{paste(country, year)} as the time id).
+#' consolidated from the three exchange production files. Paper A uses the
+#' firm and country--year specification for a complete exact-inference workflow.
+#' The diffuse-regime variance companion also uses seven outcome/subsample/FE
+#' variants to compare HC0--HC3 behavior.
 #'
 #' @format A data frame with 217 firm-year rows and 6 variables:
 #' \describe{
@@ -116,6 +109,7 @@
 #' @source Hand-collected from Warsaw (WSE), Budapest (BSE) and Prague (PSE)
 #'   exchange filings; the panel of Paper A's empirical application.
 #' @examples
-#' # Preferred specification: log return on F-Score, firm + year fixed effects
-#' leverage_report(log1p(fscore$ret), fscore$fscore, fscore$uid, fscore$year)
+#' # Paper A specification: log return on F-Score, firm + country-year effects
+#' cy <- interaction(fscore$country, fscore$year, drop = TRUE)
+#' cycle_capture(fscore$fscore, fscore$uid, cy)
 "fscore"

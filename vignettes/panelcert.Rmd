@@ -19,32 +19,33 @@ set.seed(1)
 
 ## What the package does
 
-`panelcert` answers one question: **given the fixed-effect panel
-regression you have already run, is the naive t-test size-controlled — and if
-not, by how much does it fail?** It is a diagnostic tool, not an estimation
-framework and not a remedy library. Each diagnostic consumes your fitted model
-(`fixest::feols`, `plm::plm`, `lm`) or the raw panel, and returns an
-`AdequacyReport` with a plain-language verdict:
+`panelcert` diagnoses whether conventional fixed-effect inference is reliable
+and implements Paper A's exact nuisance-annihilating contrast alternative.
+The diagnostic modules consume a fitted model (`fixest::feols`, `plm::plm`,
+`lm`) or raw panel; the contrast engine works from the design and outcome.
+Reports use four plain-language verdicts:
 
 - **CERTIFIED at tolerance delta** — the worst-case size of the nominal-alpha
   test stays below `alpha + delta`;
 - **FLAGGED (implied size X%)** — it does not, and the report quantifies the
   failure and points to the appropriate remedy;
+- **POINT PASS** — a plug-in or finite-threshold comparison passes, but is not
+  a formal confidence-band certificate;
 - **INCONCLUSIVE** — a pre-outcome design statistic that needs a pilot input.
 
-Three modules, one per source paper:
+The current source map is:
 
-| Module | Pathology | Headline statistic |
+| Source | Problem | Headline output |
 |---|---|---|
-| A | variance-estimator choice under FE saturation | HC0–HC3 hierarchy, leverage |
-| B | classical measurement error in the regressor | within reliability `lambda_hat` |
-| C | TWFE heterogeneity in staggered DiD | design statistic `Gamma` |
+| Paper A | concentrated identifying variation | `lambda_n`, `kappa`, exact sign-flip interval |
+| Paper B | classical measurement error | within reliability `lambda_hat` |
+| Paper C | TWFE heterogeneity in staggered DiD | design statistic `Gamma` |
+| Diffuse companion | variance-estimator choice under FE saturation | HC0–HC3 hierarchy, leverage |
 
 ## Bundled data — the paper applications run offline
 
-The reference panels from the source papers ship with the package, so their
-applications reproduce with no data download. After `library(panelcert)` the
-datasets are available by name:
+The small reference panels ship with the package. After `library(panelcert)`
+the datasets are available by name:
 
 ```{r}
 library(panelcert)
@@ -52,8 +53,9 @@ data(package = "panelcert")$results[, "Item"]   # vdem, psid, castle, divorce, f
 twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)$verdict
 ```
 
-Each module vignette reproduces its paper's application directly from these
-objects.
+Paper A's F-score workflow, Papers B and C, and the diffuse companion use these
+objects. The public KSS worker--firm testing extract is intentionally not
+vendored; Paper A's replication code downloads it from the source repository.
 
 ## The shared design summary
 
@@ -70,11 +72,20 @@ design_summary(unit, time)
 
 ## A sixty-second tour
 
+Paper A exact inference in a balanced worker-time panel:
+
+```{r}
+set.seed(3)
+n <- length(unit)
+x <- rnorm(n)
+y <- 0.4 * x + rnorm(n)
+cycle_report(y, x, unit, time, nflips = 199, interval = FALSE)
+```
+
 Module B on a panel with a noisy regressor (measurement-error SD known, e.g.
 from a validation study or a published measurement model):
 
 ```{r}
-n <- length(unit)
 x_true <- rnorm(n) + 0.2 * unit          # true regressor
 x_obs <- x_true + rnorm(n, sd = 0.3)     # observed with error
 y <- 0.6 * x_true + rnorm(n)

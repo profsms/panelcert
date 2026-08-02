@@ -2,9 +2,10 @@
 # diagnostic; the print method is the adoption-critical legible verdict.
 
 .PATHOLOGY_TITLES <- c(
-  leverage            = "Leverage / Variance (Paper A)",
+  leverage            = "Leverage / Variance (diffuse-regime companion)",
   measurement_error   = "Measurement Error (Paper B)",
-  twfe_heterogeneity  = "TWFE Heterogeneity (Paper C)"
+  twfe_heterogeneity  = "TWFE Heterogeneity (Paper C)",
+  cycle_inference     = "Concentrated Identifying Variation (Paper A)"
 )
 
 .new_AdequacyReport <- function(pathology, design, statistic, eta, threshold,
@@ -12,7 +13,7 @@
                                 notes) {
   if (!pathology %in% names(.PATHOLOGY_TITLES))
     stop("unknown pathology '", pathology, "'")
-  if (!verdict %in% c("CERTIFIED", "FLAGGED", "INCONCLUSIVE"))
+  if (!verdict %in% c("CERTIFIED", "POINT_PASS", "FLAGGED", "INCONCLUSIVE"))
     stop("unknown verdict '", verdict, "'")
   structure(list(pathology = pathology, design = design, statistic = statistic,
                  eta = eta, threshold = threshold, breakdown = breakdown,
@@ -41,25 +42,62 @@
     if (has("neg_share"))
       line <- paste0(line, sprintf("   negative-weight share = %.1f%%", 100 * s$neg_share))
     lines <- c(lines, line)
+    if (has("Gamma_cmb"))
+      lines <- c(lines, sprintf("  restricted ladder: Gamma_c+e = %.3f | Gamma_evt = %.3f | Gamma_coh = %.3f",
+                                s$Gamma_cmb, s$Gamma_evt, s$Gamma_coh))
     if (has("Gamma_CR"))
-      lines <- c(lines, sprintf("Cluster-robust Gamma_CR = %.3f (psi_hat = %.3f)",
-                                s$Gamma_CR, s$psi_hat))
+      lines <- c(lines, sprintf("Cluster-robust (psi_hat = %.3f): Gamma_c+e,CR = %.3f | Gamma_CR = %.3f",
+                                s$psi_hat, s$Gamma_cmb_CR, s$Gamma_CR))
     if (has("beta"))
       lines <- c(lines, sprintf("TWFE beta_hat = %.4g   sigma = %.4g", s$beta, s$sigma))
-    if (has("cohort_sd_raw"))
-      lines <- c(lines, sprintf("Cohort dispersion: raw sd %.4g -> shrunk %.4g (factor %.3f)",
-                                s$cohort_sd_raw, s$cohort_sd_shrunk, s$shrink_factor))
-    if (has("eta_worst"))
-      lines <- c(lines, sprintf("Worst-case |eta| (shrunk pilot) = %.3g", s$eta_worst))
+    if (has("pilot_cmb"))
+      lines <- c(lines, sprintf("Covariance-corrected pilots c_S/sigma: c+e = %.3g | evt = %.3g | coh = %.3g",
+                                s$pilot_cmb, s$pilot_evt, s$pilot_coh))
+    if (has("size_cmb"))
+      lines <- c(lines, sprintf("Worst-case size: combined-class = %.1f%% (headline) | cohort %.1f%% | event %.1f%%",
+                                100 * s$size_cmb, 100 * s$size_coh, 100 * s$size_evt))
+    if (has("boot") && !is.null(s$boot))
+      lines <- c(lines, sprintf("  wild bootstrap (B=%d): combined median %.1f%%, 95%% [%.1f, %.1f]; psi in [%.2f, %.2f]",
+                                s$boot$n, 100 * s$boot$cmb_med, 100 * s$boot$cmb_lo,
+                                100 * s$boot$cmb_hi, s$boot$psi_lo, s$boot$psi_hi))
+    if (has("size_realized"))
+      lines <- c(lines, sprintf("Realized-profile size (CR) = %.1f%%", 100 * s$size_realized))
+  } else if (pathology == "cycle_inference" && has("kappa")) {
+    lines <- c(lines, sprintf("Concentration: lambda_n = %.4f (N_eff = %.1f)",
+                              s$lambda_n, s$n_eff))
+    if (has("score_lambda_n") && is.finite(s$score_lambda_n))
+      lines <- c(lines, sprintf("Realized score concentration: lambda_score = %.4f (N_eff,score = %.1f)",
+                                s$score_lambda_n, s$score_n_eff))
+    ctext <- if (has("effective_C") && s$effective_C != s$C)
+      sprintf("%d supports (%d treatment-loaded)", s$C, s$effective_C)
+    else sprintf("%d supports", s$C)
+    lines <- c(lines, sprintf(
+      "Capture kappa_C = %.4f over %s (cycle-space dim %d) | capture-implied SE ratio %.3fx | max share %.3f",
+      s$kappa, ctext, s$cycle_dim, s$se_price, s$max_share))
+    if (!is.null(s$beta_tilde)) {
+      l <- sprintf("Contrast estimate beta~ = %.4g", s$beta_tilde)
+      if (!is.null(s$ci_lo) && !is.na(s$ci_lo)) {
+        l <- paste0(l, sprintf("   exact %.0f%% set: [%.4g, %.4g]%s",
+                    100 * (if (has("ci_level")) s$ci_level else 0.95),
+                    s$ci_lo, s$ci_hi,
+                    if (isTRUE(s$ci_grid_truncated)) " (conservative: grid boundary reached)" else ""))
+      } else {
+        l <- paste0(l, "   exact set: EMPTY at this level")
+      }
+      lines <- c(lines, l)
+    }
   } else if (pathology == "leverage" && has("max_leverage")) {
     line <- sprintf("Max leverage max_i H_ii = %.3f", s$max_leverage)
     if (has("leverage_spread"))
       line <- paste0(line, sprintf(" | spread hmax/hmin = %.2f", s$leverage_spread))
     lines <- c(lines, line)
-    if (has("se_cjn")) {
-      lines <- c(lines, sprintf("SE(beta): CJN %.4g | HC0 %.4g | HC2/LO %.4g | HC3 %.4g",
-                                s$se_cjn, s$se_hc0, s$se_hc2, s$se_hc3))
-      lines <- c(lines, sprintf("beta_hat = %.4g   t (HC2/LO) = %.2f", s$beta, s$t_hc2))
+    if (has("score_lambda_n") && is.finite(s$score_lambda_n))
+      lines <- c(lines, sprintf("Realized score concentration: lambda_score = %.4f (N_eff,score = %.1f)",
+                                s$score_lambda_n, s$score_n_eff))
+    if (has("se_df")) {
+      lines <- c(lines, sprintf("SE(beta): df-corrected %.4g | HC0 %.4g | HC2 %.4g | HC3 %.4g",
+                                s$se_df, s$se_hc0, s$se_hc2, s$se_hc3))
+      lines <- c(lines, sprintf("beta_hat = %.4g   t (HC2) = %.2f", s$beta, s$t_hc2))
     }
   } else {
     for (k in names(s)) lines <- c(lines, paste0(k, " = ", format(s[[k]])))
@@ -100,7 +138,10 @@ print.AdequacyReport <- function(x, ...) {
   if (!is.null(x$implied_size))
     cat(sprintf("Implied size of nominal %.0f%% test: %.1f%%\n",
                 100 * x$alpha, 100 * x$implied_size))
-  if (x$verdict == "INCONCLUSIVE") {
+  if (x$verdict == "POINT_PASS") {
+    cat(sprintf("VERDICT: POINT PASS at delta=%.2g (descriptive \u2014 not a certificate)",
+                x$delta))
+  } else if (x$verdict == "INCONCLUSIVE") {
     cat("VERDICT: INCONCLUSIVE")
   } else {
     cat(sprintf("VERDICT: %s at delta=%.2g", x$verdict, x$delta))

@@ -4,18 +4,23 @@
 \alias{reliability_from_ratio}
 \title{Measurement-error SD implied by an external reliability ratio}
 \usage{
-reliability_from_ratio(r, within_sd)
+reliability_from_ratio(r, within_sd, scale = c("observed", "signal"))
 }
 \arguments{
 \item{r}{reliability ratio in (0, 1]}
 
-\item{within_sd}{within-SD of the observed regressor}
+\item{within_sd}{within-SD on the scale selected by `scale`}
+
+\item{scale}{`"observed"` (default) or `"signal"`}
 }
 \value{
 scalar measurement-error SD
 }
 \description{
-PSID-style validation studies: `sigma_nu = sqrt((1-r)/r) * within_sd`.
+With the documented default `scale = "observed"`, `within_sd` is the SD of
+the observed regressor and `sigma_nu = sqrt(1-r) * within_sd`. Set
+`scale = "signal"` only when `within_sd` is the latent-signal SD; then
+`sigma_nu = sqrt((1-r)/r) * within_sd`.
 }
 \examples{
 reliability_from_ratio(0.65, within_sd = 0.15)  # PSID within reliability

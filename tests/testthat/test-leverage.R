@@ -1,4 +1,4 @@
-# Module A (Paper A): exact identities vs dense computation + Table 4 sizes.
+# Diffuse companion: exact identities vs dense computation and size maps.
 
 test_that("implied sizes (Thm 3.1 / Cor 3.1; Table 4 predictions)", {
   expect_equal(PD$.size_hc0(0.052, 0.05), 0.056, tolerance = 1e-3 / 0.056)
@@ -47,7 +47,7 @@ test_that("exact HC identities under uniform full leverage", {
   expect_equal(st$se_hc1, st$se_hc2, tolerance = 1e-8)
   expect_equal(st$se_hc0 / st$se_hc2, sqrt(1 - Hbar), tolerance = 1e-8)
   expect_equal(st$se_hc3 / st$se_hc2, 1 / sqrt(1 - Hbar), tolerance = 1e-8)
-  expect_equal(st$se_cjn, st$se_naive * sqrt(n / (n - (N + T - 1) - 1)),
+  expect_equal(st$se_df, st$se_naive * sqrt(n / (n - (N + T - 1) - 1)),
                tolerance = 1e-12)
 })
 
@@ -77,7 +77,7 @@ test_that("matches dense full-regression computation (unbalanced)", {
   st <- rep_$statistic
   expect_equal(st$beta, coefs[length(coefs)], tolerance = 1e-8)
   expect_equal(st$max_leverage, max(H_dense), tolerance = 1e-8)
-  expect_equal(st$se_cjn, sqrt(sum(u_dense^2) / dof / tau2), tolerance = 1e-8)
+  expect_equal(st$se_df, sqrt(sum(u_dense^2) / dof / tau2), tolerance = 1e-8)
   expect_equal(st$se_hc0, sqrt(sum(xt_dense^2 * u_dense^2)) / tau2, tolerance = 1e-8)
   expect_equal(st$se_hc2, sqrt(sum(xt_dense^2 * u_dense^2 / (1 - H_dense))) / tau2,
                tolerance = 1e-8)
@@ -112,7 +112,7 @@ test_that("verdict logic and rendering", {
   expect_equal(rep2$breakdown, PD$.rho_dagger(0.05, 0.05), tolerance = 1e-12)
 
   out <- paste(utils::capture.output(print(rep2)), collapse = "\n")
-  expect_match(out, "Leverage / Variance \\(Paper A\\)")
+  expect_match(out, "Leverage / Variance \\(diffuse-regime companion\\)")
   expect_match(out, "SE\\(beta\\)")
   expect_match(out, "VERDICT: FLAGGED")
 

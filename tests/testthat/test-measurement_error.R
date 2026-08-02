@@ -24,8 +24,25 @@ test_that("threshold constants (Paper B, Remark rem-exact-cv)", {
 
 test_that("reliability helpers", {
   expect_equal(reliability_from_interval(c(0.1, 0.2), c(0.3, 0.5)), c(0.1, 0.15))
-  expect_equal(reliability_from_ratio(0.8, 2), sqrt(0.25) * 2)
+  expect_equal(reliability_from_ratio(0.8, 2), sqrt(0.2) * 2)
+  expect_equal(reliability_from_ratio(0.8, 2, scale = "signal"), sqrt(0.25) * 2)
   expect_error(reliability_from_ratio(1.2, 2))
+  expect_error(reliability_from_ratio(0.8, -1))
+  expect_error(reliability_from_interval(0.3, 0.2))
+})
+
+test_that("primitive threshold uses exact inversion by default", {
+  rho <- 0.2; c2 <- 3; beta0 <- 0.7; sigma <- 1.4
+  expected <- beta0^2 * c2^2 * (1 - rho) /
+    (sigma^2 * PD$.eta_dagger(0.05, 0.05)^2) - c2
+  expect_equal(tau2_crit(rho, c2, beta0, sigma), expected, tolerance = 1e-12)
+  z <- stats::qnorm(0.975)
+  quad <- beta0^2 * c2^2 * (1 - rho) * z * stats::dnorm(z) /
+    (sigma^2 * 0.05) - c2
+  expect_equal(tau2_crit(rho, c2, beta0, sigma, method = "quadratic"),
+               quad, tolerance = 1e-12)
+  expect_gt(tau2_crit(rho, c2, beta0, sigma),
+            tau2_crit(rho, c2, beta0, sigma, method = "quadratic"))
 })
 
 test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
@@ -45,17 +62,20 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   expect_equal(r$threshold, 0.652, tolerance = 5e-4 / 0.652)
   expect_equal(r$breakdown, 0.762, tolerance = 2e-3 / 0.762)  # fixed point (paper Table 3)
   # point verdict is exactly equivalent to lambda_hat >= breakdown
-  expect_identical(r$statistic$lambda_hat >= r$breakdown, r$verdict == "CERTIFIED")
-  expect_identical(r$verdict, "CERTIFIED")
+  expect_identical(r$statistic$lambda_hat >= r$breakdown, r$verdict == "POINT_PASS")
+  expect_identical(r$verdict, "POINT_PASS")   # point pilot: a pass, not a certificate
   rc <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd)
-  expect_identical(rc$verdict, "CERTIFIED")
+  expect_identical(rc$verdict, "CERTIFIED")   # conservative pilot: a certificate
   expect_gt(rc$statistic$eta_upper, rc$eta)
   # cluster-robust (country CRVE): paper Table 3 psi_hat = 19.2, still certified
   rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
                       pilot = "point", cluster = "crve")
   expect_equal(rcr$statistic$psi_hat, 19.18, tolerance = 1e-2)
   expect_equal(rcr$implied_size, 0.050, tolerance = 1e-3 / 0.050)
-  expect_identical(rcr$verdict, "CERTIFIED")
+  expect_identical(rcr$verdict, "POINT_PASS")
+  expect_true("projection_ratio" %in% names(rcr$statistic$cluster))
+  expect_equal(rcr$statistic$cluster$projection_ratio, 0.0069,
+               tolerance = 2e-4 / 0.0069)
 
   s <- vdem_spec(v, "v2xlg_legcon", "v2xlg_legcon_sd")
   r <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "point")
@@ -70,12 +90,12 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
                       pilot = "point", cluster = "crve")
   expect_equal(rcr$statistic$psi_hat, 24.05, tolerance = 1e-2)
   expect_equal(rcr$implied_size, 0.054, tolerance = 1e-3 / 0.054)
-  expect_identical(rcr$verdict, "CERTIFIED")
+  expect_identical(rcr$verdict, "POINT_PASS")
 
   # THE naive-pilot danger (Prop. prop-pilot(i)) on real data
   rn <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "naive")
   expect_equal(rn$eta, 0.8853 * 0.5472, tolerance = 1e-2)
-  expect_identical(rn$verdict, "CERTIFIED")   # the exact error Paper B prevents
+  expect_identical(rn$verdict, "POINT_PASS")  # the exact error Paper B prevents
   expect_true(any(grepl("ANTI-CONSERVATIVE", rn$notes)))
 
   s <- vdem_spec(v, "v2x_jucon", "v2x_jucon_sd")
@@ -126,13 +146,13 @@ test_that("PSID application via summary form (Paper B app-psid)", {
                                pilot = "point", psi = 2.330)
   expect_equal(rpsi$eta, 0.556, tolerance = 2e-3 / 0.556)
   expect_equal(rpsi$implied_size, 0.086, tolerance = 1e-3 / 0.086)
-  expect_identical(rpsi$verdict, "CERTIFIED")
+  expect_identical(rpsi$verdict, "POINT_PASS")
   expect_equal(rpsi$breakdown, 0.613, tolerance = 2e-3 / 0.613)
 
   rp <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.82,
                              pilot = "point")
   expect_equal(rp$implied_size, 0.0638, tolerance = 1e-3 / 0.0638)
-  expect_identical(rp$verdict, "CERTIFIED")
+  expect_identical(rp$verdict, "POINT_PASS")  # paper: point pass / formal fail
   rf <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.82)
   expect_identical(rf$verdict, "FLAGGED")   # formal certificate fails (paper ddagger)
   expect_equal(rf$statistic$eta_upper, 0.707, tolerance = 2e-3 / 0.707)
@@ -154,6 +174,8 @@ test_that("input validation and edge cases", {
   expect_error(eiv_adequacy(y, x, uid, tid, sigma_nu = 0.1, reliability = 0.9))
   expect_error(eiv_adequacy(y, x, uid, tid, reliability = 1.2))
   expect_error(eiv_adequacy(y, x, uid, tid, codelow = x), "both codelow")
+  expect_error(eiv_adequacy(y, x, uid, tid, sigma_nu = c(0.1, 0.2)))
+  expect_error(eiv_adequacy(y, x, uid, tid, sigma_nu = -0.1))
 
   rh <- eiv_adequacy(y, x, uid, tid, sigma_nu = 100)
   expect_identical(rh$verdict, "FLAGGED")
@@ -166,5 +188,5 @@ test_that("input validation and edge cases", {
 
   r1 <- eiv_adequacy(y, x, uid, tid, reliability = 1, pilot = "point")
   expect_equal(r1$eta, 0)
-  expect_identical(r1$verdict, "CERTIFIED")
+  expect_identical(r1$verdict, "POINT_PASS")
 })

@@ -1,0 +1,69 @@
+---
+title: "Paper A: exact contrast inference"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Paper A: exact contrast inference}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      eval = requireNamespace("panelcert", quietly = TRUE))
+set.seed(7)
+```
+
+## Design, contrasts, and exactness
+
+Paper A separates two questions. Treatment concentration (`lambda_n`) warns
+when a Gaussian approximation may be unreliable. Nuisance-annihilating
+contrasts then provide finite-sample sign-flip inference under the paper's
+joint sign-invariance assumption. Exactness comes from that assumption and
+verified nuisance annihilation, not from a small value of `lambda_n`.
+
+```{r}
+library(panelcert)
+N <- 24
+worker <- rep(seq_len(N), each = 2)
+year <- rep(1999:2000, times = N)
+x <- rnorm(2 * N)
+y <- 0.5 * x + rnorm(2 * N)
+
+out <- cycle_report(y, x, worker, year, nflips = 999,
+                    interval = FALSE)
+out
+```
+
+`cycle_contrasts()` constructs two-way cycle systems. For worker--firm--year
+and other multiway designs, construct design-only supports explicitly and let
+`contrast_system()` verify every fixed-effect dimension:
+
+```{r}
+worker <- c(1, 1, 2, 2)
+firm <- c(10, 10, 20, 20)
+year <- c(1999, 2001, 1999, 2001)
+x <- c(0, 0, 0, 1)
+
+cs <- contrast_system(
+  x,
+  fe_levels = list(worker, firm, year),
+  rows = list(1:4),
+  weights = list(c(-1, 1, 1, -1)),
+  blocks = worker
+)
+support_compatibility(cs, worker)
+```
+
+With clustered errors, pass dependence-block ids to construction and
+inference. Every treatment-loaded support must contain complete blocks, and a
+block cannot be split between supports. `cycle_report(..., blocks = worker)`
+also reports treatment and realized-score concentration at the worker level.
+
+## Interpretation
+
+`kappa` is always the observable fraction of within-treatment variation
+captured by the contrast system. It is a Pitman efficiency only when both power
+conditions in Paper A hold. `POINT_PASS` means only that the finite design lies
+below a user-selected concentration warning threshold; it is not a theorem-
+level certificate. A `FLAGGED` design is precisely where the exact contrast
+interval is most relevant.

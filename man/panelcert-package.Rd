@@ -6,18 +6,24 @@
 \alias{panelcert-package}
 \title{panelcert: Inference-Adequacy Diagnostics for Panel-Data Designs}
 \description{
-Certifies whether naive inference on an already-estimated fixed-effect panel design is size-controlled, and if not, by how much. Three diagnostic modules, one per source paper: leverage/variance estimator adequacy (HC0-HC3 hierarchy under fixed-effect saturation), measurement-error adequacy (Stock-Yogo-style within-reliability thresholds via exact inversion of the non-central size), and staggered-DiD TWFE-heterogeneity adequacy (the Gamma design statistic and its cluster-robust form). Diagnostic only: consumes fitted output, implements no remedies, and points to them.
+Implements exact nuisance-annihilating contrast inference for fixed-effect designs with concentrated identifying variation, and diagnoses when conventional inference is unreliable because of leverage, classical measurement error, or staggered-DiD treatment-effect heterogeneity. Reports design and realized-score concentration, capture, exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal measurement-error thresholds, and TWFE design exposure.
 }
 \details{
-Diagnostics: [leverage_report()] (Module A, variance estimators under FE
-saturation), [eiv_adequacy()] (Module B, measurement error), and
-[twfe_design()] / [twfe_adequacy()] (Module C, staggered-DiD TWFE
-heterogeneity). Shared primitives: [design_summary()], [twoway_demean()],
-[fe_leverage()]. Every diagnostic returns an `AdequacyReport` with a
-plain-language verdict; see `vignette("paneldiagnostics")`.
+Inference and diagnostics: [cycle_report()] and [contrast_system()] (Paper A,
+exact contrast inference), [eiv_adequacy()] (Paper B, measurement error),
+[twfe_design()] / [twfe_adequacy()] (Paper C, staggered-DiD heterogeneity),
+and [leverage_report()] (the diffuse-regime variance companion). Shared
+primitives include [design_summary()], [twoway_demean()],
+[multiway_demean()], and [fe_leverage()]. Reports use a plain-language
+verdict; see `vignette("panelcert")` and `vignette("cycle-inference")`.
 }
 \author{
 \strong{Maintainer}: Stanislaw M. S. Halkiewicz \email{smsh@duck.com} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
+
+Authors:
+\itemize{
+  \item Stanislaw M. S. Halkiewicz \email{smsh@duck.com} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
+}
 
 }
 \keyword{internal}

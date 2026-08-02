@@ -42,7 +42,7 @@ an object of class \code{AdequacyReport}
 }
 \description{
 Reproduces the user's FE regression of `y` on `x` with unit and time fixed
-effects via Frisch-Waugh (never re-specified), then reports the naive / CJN /
+effects via Frisch-Waugh (never re-specified), then reports the naive / df-corrected /
 HC0-HC3 variance hierarchy, the leverage diagnostics, and whether the
 variance-estimator choice materially changes inference at tolerance `delta`.
 }
@@ -57,6 +57,6 @@ x <- rnorm(n); y <- 0.5 * x + rnorm(n)
 leverage_report(y, x, unit, time)
 }
 \references{
-Halkiewicz, S. M. S. Variance estimation for saturated
-  fixed-effect specifications (Paper A).
+Halkiewicz, S. M. S. Corrected diffuse-regime variance
+  framework for saturated fixed-effect specifications.
 }
