@@ -85,7 +85,9 @@
 #' @source Stevenson and Wolfers divorce data (via the \pkg{bacondecomp}
 #'   distribution); analysis panel derived as in the Paper C audit.
 #' @examples
+#' \donttest{
 #' twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
+#' }
 "divorce"
 
 #' Piotroski F-Score / Visegrad firm panel (Paper A application)
@@ -113,3 +115,31 @@
 #' cy <- interaction(fscore$country, fscore$year, drop = TRUE)
 #' cycle_capture(fscore$fscore, fscore$uid, cy)
 "fscore"
+
+#' Canonical 11-firm Grunfeld investment panel
+#'
+#' The complete corrected 1935--1954 panel used for Paper A's concentrated-
+#' variation showcase. The canonical regression is investment on capital and
+#' market value with firm and year fixed effects. Several 10- and five-firm
+#' variants circulate; Kleiber and Zeileis (2010) document their omissions and
+#' transcription errors.
+#'
+#' @format A data frame with 220 firm-year rows and 5 variables:
+#' \describe{
+#'   \item{invest}{gross investment in 1947 dollars}
+#'   \item{value}{market value at year end in 1947 dollars}
+#'   \item{capital}{stock of plant and equipment in 1947 dollars}
+#'   \item{firm}{firm name}
+#'   \item{year}{calendar year, 1935--1954}
+#' }
+#' @source Public-domain statsmodels Grunfeld data at commit
+#'   \code{57169f2cfc7089141513ed6103f79fa56ab213ac}, accessed 2026-08-02;
+#'   reconstructed from Grunfeld (1958) by Kleiber and Zeileis (2010).
+#' @examples
+#' applicable(grunfeld$capital, grunfeld$firm, grunfeld$year,
+#'            controls = grunfeld$value)
+#' \donttest{
+#' cycle_report(grunfeld$invest, grunfeld$capital, grunfeld$firm,
+#'              grunfeld$year, controls = grunfeld$value, interval = FALSE)
+#' }
+"grunfeld"

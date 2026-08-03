@@ -1,69 +1,86 @@
 ---
-title: "Paper A: exact contrast inference"
+title: "Concentrated design: diagnostics to exact inference"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Paper A: exact contrast inference}
+  %\VignetteIndexEntry{Concentrated design: diagnostics to exact inference}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
-                      eval = requireNamespace("panelcert", quietly = TRUE))
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 set.seed(7)
 ```
 
-## Design, contrasts, and exactness
+## Bundled application
 
-Paper A separates two questions. Treatment concentration (`lambda_n`) warns
-when a Gaussian approximation may be unreliable. Nuisance-annihilating
-contrasts then provide finite-sample sign-flip inference under the paper's
-joint sign-invariance assumption. Exactness comes from that assumption and
-verified nuisance annihilation, not from a small value of `lambda_n`.
+Paper A's return-panel application is bundled as `fscore`. The specification
+uses firm and country-year fixed effects, so every number below is reproducible
+without a download.
 
 ```{r}
 library(panelcert)
-N <- 24
-worker <- rep(seq_len(N), each = 2)
-year <- rep(1999:2000, times = N)
-x <- rnorm(2 * N)
-y <- 0.5 * x + rnorm(2 * N)
-
-out <- cycle_report(y, x, worker, year, nflips = 999,
-                    interval = FALSE)
-out
+data(fscore)
+cy <- interaction(fscore$country, fscore$year, drop = TRUE)
+y <- log1p(fscore$ret)
+x <- fscore$fscore
 ```
 
-`cycle_contrasts()` constructs two-way cycle systems. For worker--firm--year
-and other multiway designs, construct design-only supports explicitly and let
-`contrast_system()` verify every fixed-effect dimension:
+## Diagnose concentration
+
+The design summary requires no outcome. `lambda_n` is the largest observation's
+share of within-treatment variation and `n_eff` is its inverse-Herfindahl
+effective support.
 
 ```{r}
-worker <- c(1, 1, 2, 2)
-firm <- c(10, 10, 20, 20)
-year <- c(1999, 2001, 1999, 2001)
-x <- c(0, 0, 0, 1)
-
-cs <- contrast_system(
-  x,
-  fe_levels = list(worker, firm, year),
-  rows = list(1:4),
-  weights = list(c(-1, 1, 1, -1)),
-  blocks = worker
-)
-support_compatibility(cs, worker)
+d <- design_summary(fscore$uid, cy, x = x)
+d
 ```
 
-With clustered errors, pass dependence-block ids to construction and
-inference. Every treatment-loaded support must contain complete blocks, and a
-block cannot be split between supports. `cycle_report(..., blocks = worker)`
-also reports treatment and realized-score concentration at the worker level.
+The one-call screen adds the greedy lower bound and the designed packing. It
+can be used for a prevalence exercise before outcomes are collected.
 
-## Interpretation
+```{r}
+screen <- adequacy_row(x, fscore$uid, cy, method = "structured")
+screen[c("Vn", "lambda_n", "n_eff", "kappa_greedy",
+         "kappa_designed", "se_price")]
+```
 
-`kappa` is always the observable fraction of within-treatment variation
-captured by the contrast system. It is a Pitman efficiency only when both power
-conditions in Paper A hold. `POINT_PASS` means only that the finite design lies
-below a user-selected concentration warning threshold; it is not a theorem-
-level certificate. A `FLAGGED` design is precisely where the exact contrast
-interval is most relevant.
+## Capture and granularity
+
+The structured packing uses disjoint four-cycles. `kappa` is the observable
+share of within-treatment variation captured by its annihilating contrasts;
+it is a Pitman efficiency only under Paper A's two additional power conditions.
+
+```{r}
+cs <- cycle_contrasts(x, fscore$uid, cy, method = "structured")
+c(C = length(cs$rows), kappa = cs$kappa,
+  effective_C = length(panelcert:::.active_supports(cs)))
+```
+
+Every contrast satisfies `v'D = 0`. Consequently `v'x_tilde = v'x` exactly:
+packing is ranked on raw `x`, while iterative residualization is used only for
+the denominator `V_n`. Both package implementations regression-test this
+identity and the selected supports.
+
+## Exact interval
+
+The report adds realized score concentration and the pass/flag/inconclusive
+verdict. The interval is then obtained by sign-flip inversion. The reduced
+Monte Carlo and grid sizes below keep vignette builds fast; replication runs
+should increase them.
+
+```{r}
+report <- cycle_report(y, x, fscore$uid, cy, method = "structured",
+                       nflips = 1999, interval = FALSE)
+report
+
+ci <- signflip_interval(y, cs, alpha = 0.05, nflips = 1999,
+                        ngrid = 2401)
+unlist(ci[c("lo", "hi", "beta_tilde", "effective_C", "kappa")])
+```
+
+Exactness requires joint sign invariance at the dependence-block level and
+supports that contain whole blocks. For clustered errors, pass `blocks` to
+`cycle_contrasts()`, `cycle_report()`, and `signflip_interval()`; the package
+rejects an incompatible packing instead of silently asserting exactness.

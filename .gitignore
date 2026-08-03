@@ -17,3 +17,10 @@ src/*.dll
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated documentation and parity output
+README.html
+parity/julia.json
+parity/r.json
+parity/julia_packing.json
+parity/r_packing.json

@@ -23,7 +23,7 @@
   FE <- stats::model.matrix(model, type = "fixef")
   list(y = y, x = as.numeric(X[, xcols]),
        unit = FE[[fe_vars[1]]], time = FE[[fe_vars[2]]],
-       beta = unname(stats::coef(model)[xcols]))
+       controls = NULL, beta = unname(stats::coef(model)[xcols]))
 }
 
 #' @rdname eiv_adequacy
@@ -71,7 +71,7 @@ twfe_adequacy.fixest <- function(object, first_treat, ...) {
          paste(xvars, collapse = ", "))
   list(y = y, x = as.numeric(mf[[xvars]]),
        unit = as.character(idx[[1]]), time = as.character(idx[[2]]),
-       beta = unname(stats::coef(model)[xvars]))
+       controls = NULL, beta = unname(stats::coef(model)[xvars]))
 }
 
 #' @rdname eiv_adequacy
@@ -108,15 +108,22 @@ twfe_adequacy.plm <- function(object, first_treat, ...) {
     if (!v %in% names(mf))
       stop("'", v, "' is not a variable of the fitted model; model.frame has: ",
            paste(names(mf), collapse = ", "))
+  other <- setdiff(names(mf)[-1L], c(x, unit, time))
+  if (length(other) && any(!vapply(mf[other], is.numeric, logical(1))))
+    stop("additional lm covariates must be numeric; unsupported terms: ",
+         paste(other[!vapply(mf[other], is.numeric, logical(1))], collapse = ", "))
+  controls <- if (length(other)) as.matrix(mf[other]) else NULL
   list(y = as.numeric(stats::model.response(mf)), x = as.numeric(mf[[x]]),
        unit = as.character(mf[[unit]]), time = as.character(mf[[time]]),
-       beta = unname(stats::coef(model)[x]))
+       controls = controls, beta = unname(stats::coef(model)[x]))
 }
 
 #' @rdname eiv_adequacy
 #' @export
 eiv_adequacy.lm <- function(object, x, unit, time, ...) {
   fr <- .frame_from_lm(object, x, unit, time)
+  if (!is.null(fr$controls))
+    stop("the eiv_adequacy lm adapter currently requires a single non-FE regressor")
   .check_adapter_beta(fr, "lm")
   eiv_adequacy.default(fr$y, fr$x, fr$unit, fr$time, ...)
 }
@@ -126,7 +133,8 @@ eiv_adequacy.lm <- function(object, x, unit, time, ...) {
 leverage_report.lm <- function(object, x, unit, time, ...) {
   fr <- .frame_from_lm(object, x, unit, time)
   .check_adapter_beta(fr, "lm")
-  leverage_report.default(fr$y, fr$x, fr$unit, fr$time, ...)
+  leverage_report.default(fr$y, fr$x, fr$unit, fr$time,
+                           controls = fr$controls, ...)
 }
 
 # The extracted regression must reproduce the fitted coefficient exactly \u2014
@@ -134,8 +142,10 @@ leverage_report.lm <- function(object, x, unit, time, ...) {
 .check_adapter_beta <- function(fr, label) {
   if (is.na(fr$beta)) return(invisible(NULL))
   cc <- .integer_codes(fr$unit, fr$time)
-  xt <- .twoway_demean_codes(fr$x, cc$uid, cc$tid, cc$N, cc$T)
-  yt <- .twoway_demean_codes(fr$y, cc$uid, cc$tid, cc$N, cc$T)
+  partial <- .partial_within_codes(fr$x, cc$uid, cc$tid, cc$N, cc$T,
+                                   controls = fr$controls)
+  xt <- partial$xt
+  yt <- .partial_outcome_codes(fr$y, cc$uid, cc$tid, cc$N, cc$T, partial$Q)
   beta <- sum(xt * yt) / sum(xt^2)
   if (abs(beta - fr$beta) > 1e-6 * max(abs(fr$beta), 1))
     warning("the two-way FE reproduction (beta = ", format(beta),

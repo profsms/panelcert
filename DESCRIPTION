@@ -1,11 +1,10 @@
 Package: panelcert
 Type: Package
 Title: Inference-Adequacy Diagnostics for Panel-Data Designs
-Version: 0.4.2
-Authors@R: person("Stanislaw M. S.", "Halkiewicz", email = "smsh@duck.com",
+Version: 0.5.0
+Authors@R: person("Stanislaw M. S.", "Halkiewicz", email = "stashal@o2.pl",
     role = c("aut", "cre"), comment = c(ORCID = "0009-0000-7344-7522"))
-Author: Stanislaw M. S. Halkiewicz [aut, cre]
-Maintainer: Stanislaw M. S. Halkiewicz <smsh@duck.com>
+Maintainer: Stanislaw M. S. Halkiewicz <stashal@o2.pl>
 Description: Implements exact nuisance-annihilating contrast inference for
     fixed-effect designs with concentrated identifying variation, and
     diagnoses when conventional inference is unreliable because of leverage,
@@ -17,8 +16,10 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.5.0)
-Imports: stats
-Suggests: testthat (>= 3.0.0), fixest, plm, knitr, rmarkdown
+Imports: stats, Matrix
+Suggests: testthat (>= 3.0.0), fixest, plm, knitr, rmarkdown, covr, pkgdown
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
+URL: https://github.com/profsms/panelcert
+BugReports: https://github.com/profsms/panelcert/issues

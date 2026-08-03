@@ -16,7 +16,16 @@
 
 leverage_report(object, ...)
 
-\method{leverage_report}{default}(object, x, unit, time, alpha = 0.05, delta = 0.05, ...)
+\method{leverage_report}{default}(
+  object,
+  x,
+  unit,
+  time,
+  alpha = 0.05,
+  delta = 0.05,
+  controls = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{outcome vector (default method), or a fitted \code{fixest} /
@@ -36,6 +45,8 @@ name of the time variable in the model frame}
 \item{alpha}{nominal test level}
 
 \item{delta}{size-distortion tolerance}
+
+\item{controls}{optional numeric nuisance-covariate vector or matrix.}
 }
 \value{
 an object of class \code{AdequacyReport}

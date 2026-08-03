@@ -74,6 +74,8 @@
     lines <- c(lines, sprintf(
       "Capture kappa_C = %.4f over %s (cycle-space dim %d) | capture-implied SE ratio %.3fx | max share %.3f",
       s$kappa, ctext, s$cycle_dim, s$se_price, s$max_share))
+    if (has("reason") && nzchar(s$reason))
+      lines <- c(lines, paste0("Reason: ", s$reason))
     if (!is.null(s$beta_tilde)) {
       l <- sprintf("Contrast estimate beta~ = %.4g", s$beta_tilde)
       if (!is.null(s$ci_lo) && !is.na(s$ci_lo)) {
@@ -91,6 +93,9 @@
     if (has("leverage_spread"))
       line <- paste0(line, sprintf(" | spread hmax/hmin = %.2f", s$leverage_spread))
     lines <- c(lines, line)
+    if (has("lambda_n"))
+      lines <- c(lines, sprintf("Design conditions: lambda_n = %.4f (N_eff = %.1f) | max|H_ii - rho| = %.3f",
+                                s$lambda_n, s$n_eff, s$uniform_leverage_gap))
     if (has("score_lambda_n") && is.finite(s$score_lambda_n))
       lines <- c(lines, sprintf("Realized score concentration: lambda_score = %.4f (N_eff,score = %.1f)",
                                 s$score_lambda_n, s$score_n_eff))
