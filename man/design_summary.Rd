@@ -4,12 +4,25 @@
 \alias{design_summary}
 \title{Design-summary primitive (spec section 2.1)}
 \usage{
-design_summary(unit, time, x = NULL)
+design_summary(
+  unit = NULL,
+  time = NULL,
+  x = NULL,
+  fe_levels = NULL,
+  controls = NULL
+)
 }
 \arguments{
 \item{unit, time}{raw identifier vectors}
 
 \item{x}{optional regressor}
+
+\item{fe_levels}{optional non-empty list of fixed-effect identifier vectors;
+when supplied, the sparse dummy-matrix rank is used for `d_K`}
+
+\item{controls}{optional numeric nuisance-covariate vector or matrix. These
+are partialled after the fixed effects; `d_K` and `rho` still describe the
+fixed-effect space alone.}
 }
 \value{
 object of class \code{DesignSummary}

@@ -17,12 +17,20 @@ primitives include [design_summary()], [twoway_demean()],
 [multiway_demean()], and [fe_leverage()]. Reports use a plain-language
 verdict; see `vignette("panelcert")` and `vignette("cycle-inference")`.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/profsms/panelcert}
+  \item Report bugs at \url{https://github.com/profsms/panelcert/issues}
+}
+
+}
 \author{
-\strong{Maintainer}: Stanislaw M. S. Halkiewicz \email{smsh@duck.com} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
+\strong{Maintainer}: Stanislaw M. S. Halkiewicz \email{stashal@o2.pl} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
 
 Authors:
 \itemize{
-  \item Stanislaw M. S. Halkiewicz \email{smsh@duck.com} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
+  \item Stanislaw M. S. Halkiewicz \email{stashal@o2.pl} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
 }
 
 }

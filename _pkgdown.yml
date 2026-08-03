@@ -1,0 +1,59 @@
+url: https://profsms.github.io/panelcert/
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: Design and screening
+    desc: Outcome-free panel geometry and one-row prevalence screens.
+    contents:
+      - design_summary
+      - applicable
+      - adequacy_row
+      - print.DesignSummary
+      - twoway_demean
+      - multiway_demean
+      - fe_dimension
+  - title: Leverage and score concentration
+    desc: Diffuse-regime leverage and realized-score diagnostics.
+    contents:
+      - leverage_report
+      - fe_leverage
+      - score_concentration
+      - print.AdequacyReport
+  - title: Concentrated identifying variation
+    desc: Paper A cycle packing, capture, and exact sign-flip inference.
+    contents:
+      - cycle_report
+      - cycle_capture
+      - cycle_contrasts
+      - contrast_system
+      - support_compatibility
+      - signflip_test
+      - signflip_interval
+  - title: Measurement error
+    desc: Paper B reliability, thresholds, clustering, and certificates.
+    contents:
+      - eiv_adequacy
+      - eiv_adequacy_summary
+      - reliability_from_interval
+      - reliability_from_ratio
+      - breakdown_reliability
+      - tau2_crit
+      - eta_finite_n
+      - cluster_diagnostics
+      - projection_compatibility
+  - title: TWFE heterogeneity
+    desc: Staggered-adoption design weights and Paper C adequacy diagnostics.
+    contents:
+      - twfe_design
+      - twfe_gammas
+      - twfe_adequacy
+  - title: Bundled applications
+    contents:
+      - vdem
+      - psid
+      - castle
+      - divorce
+      - fscore
+      - grunfeld

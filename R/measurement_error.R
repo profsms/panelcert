@@ -252,9 +252,7 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
         cdiag$G))
   }
 
-  design <- structure(list(n = n, N = N, T = T, d_K = d_K, rho = d_K / n,
-                           ncomponents = fd$ncomponents, tau_star2 = tau_star2),
-                      class = "DesignSummary")
+  design <- .design_summary_codes(uid, tid, N, T, xt = xt)
   .eiv_core(design, beta_star, sigma, tau_star2, lambda, alpha = alpha,
             delta = delta, gamma = gamma, pilot = pilot, extra_notes = extra,
             psi_hat = psi_hat, rho_ar1 = rho_ar1, cluster_diag = cdiag)
@@ -312,7 +310,8 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
     1 - sigma_nu2 * (n - d_K) / tau_star2
   }
   design <- structure(list(n = n, N = N, T = T, d_K = d_K, rho = d_K / n,
-                           ncomponents = 1L, tau_star2 = tau_star2),
+                           ncomponents = 1L, tau_star2 = tau_star2,
+                           lambda_n = NULL, n_eff = NULL),
                       class = "DesignSummary")
   .eiv_core(design, beta_star, sigma, tau_star2, lambda, alpha = alpha,
             delta = delta, gamma = gamma, pilot = pilot,

@@ -235,4 +235,49 @@ test_that("report, verdicts and the 2^(1-C) floor", {
   expect_identical(rep2$statistic$effective_C, 1L)
   expect_equal(rep2$statistic$min_pvalue, 1)
   expect_identical(rep2$verdict, "INCONCLUSIVE")   # 2^(1-1) = 1 > alpha
+  expect_match(rep2$statistic$reason, "may repair", fixed = TRUE)
+
+  # Binary-treatment granularity is structural, holding the panel fixed.
+  unit_b <- rep(1:6, each = 2)
+  time_b <- rep(1L, 12)
+  y_b <- sin(1:12) + 0.1 * cos(2 * (1:12))
+  x_low <- rep(c(1, 0), 6)
+  x_low[7:12] <- 0                         # n1 = 3
+  x_high <- rep(c(1, 0), 6)                # n1 = 6
+
+  pre_low <- applicable(x_low, unit_b, time_b)
+  pre_high <- applicable(x_high, unit_b, time_b)
+  expect_false(pre_low$ok)
+  expect_match(pre_low$reason, "n1 = 3 treated", fixed = TRUE)
+  expect_match(pre_low$reason, "Not repairable by repacking", fixed = TRUE)
+  expect_true(pre_high$ok)
+
+  low <- cycle_report(y_b, x_low, unit_b, time_b,
+                      method = "greedy", interval = FALSE)
+  high <- cycle_report(y_b, x_high, unit_b, time_b,
+                       method = "greedy", interval = FALSE)
+  expect_identical(low$verdict, "INCONCLUSIVE")
+  expect_identical(low$statistic$n_treated, 3L)
+  expect_false(low$statistic$binary_floor_ok)
+  expect_match(low$statistic$reason, "floor 2^(1-3) = 0.25", fixed = TRUE)
+  expect_false(identical(high$verdict, "INCONCLUSIVE"))
+  expect_identical(high$statistic$effective_C, 6L)
+  expect_true(high$statistic$binary_floor_ok)
+
+  x_mostly <- 1 - x_low
+  pre_mostly <- applicable(x_mostly, unit_b, time_b)
+  expect_false(pre_mostly$ok)
+  expect_match(pre_mostly$reason, "n1 = 9 treated and n0 = 3", fixed = TRUE)
+  mostly <- cycle_report(y_b, x_mostly, unit_b, time_b,
+                         method = "greedy", interval = FALSE)
+  expect_identical(mostly$verdict, "INCONCLUSIVE")
+  expect_identical(mostly$statistic$effective_C, 3L)
+
+  row <- adequacy_row(x_high, unit_b, time_b, method = "greedy")
+  expect_identical(row$n_treated, 6L)
+  expect_true(row$binary_floor_ok)
+  continuous <- adequacy_row(as.numeric(1:12), unit_b, time_b,
+                             method = "greedy")
+  expect_true(is.na(continuous$n_treated))
+  expect_true(continuous$binary_floor_ok)
 })

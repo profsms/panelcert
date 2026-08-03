@@ -15,6 +15,7 @@ cycle_report(
   nflips = 99999,
   interval = TRUE,
   lambda_max = 0.1,
+  controls = NULL,
   blocks = NULL
 )
 }
@@ -33,8 +34,8 @@ cycle_report(
 loading, then a DFS pass on leftovers; for dense panels), `"sparse"` (stayer
 digons then firm-pair four-cycles with the optimal extreme pairing; for
 MOBILITY NETWORKS, where `"structured"` is `O(N^2 T^2)` and infeasible), or
-`"greedy"` (digons then DFS-extracted cycles; a lower bound on achievable
-capture).}
+`"greedy"` (digons then DFS-extracted cycles, retaining the best of four
+fixed traversal orders; a deterministic lower bound on achievable capture).}
 
 \item{nflips}{number of random sign patterns.}
 
@@ -42,6 +43,11 @@ capture).}
 
 \item{lambda_max}{concentration warning convention; Paper A's condition is
 the sequence statement `lambda_n -> 0`, not a finite cutoff.}
+
+\item{controls}{optional numeric nuisance-covariate vector or matrix. Exact
+packing currently supports at most one linearly independent control. With
+one control, structured packing uses complete 2-by-3 rectangles and local
+cycle-space projection; other methods combine base cycles in pairs.}
 
 \item{blocks}{optional design-defined dependence-block ids.}
 }

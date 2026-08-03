@@ -32,6 +32,45 @@ fe_leverage <- function(unit, time) {
   Gp[cbind(ui, ui)] + 2 * Gp[cbind(ui, ti)] + Gp[cbind(ti, ti)]
 }
 
+.score_concentration <- function(xt, u) {
+  if (length(xt) != length(u)) stop("xt and residuals must have equal length")
+  mass <- sum(xt^2 * u^2)
+  if (!(mass > 0))
+    return(list(lambda_score = NA_real_, H_score = NA_real_,
+                n_eff_score = NA_real_))
+  shares <- xt^2 * u^2 / mass
+  H <- sum(shares^2)
+  list(lambda_score = max(shares), H_score = H, n_eff_score = 1 / H)
+}
+
+#' Realized score concentration
+#'
+#' Computes the largest residual-score variance share, its Herfindahl index,
+#' and inverse-Herfindahl effective support size for a two-way fixed-effect
+#' regression. This is a one-outcome warning diagnostic, not by itself a
+#' consistent estimator under unrestricted heteroskedasticity.
+#'
+#' @param y,x outcome and regressor vectors.
+#' @param unit,time fixed-effect identifiers.
+#' @param controls optional numeric nuisance-covariate vector or matrix.
+#' @return A list with `lambda_score`, `H_score`, and `n_eff_score`.
+#' @export
+score_concentration <- function(y, x, unit, time, controls = NULL) {
+  cc <- .integer_codes(unit, time)
+  n <- length(cc$uid)
+  if (length(y) != n || length(x) != n)
+    stop("y, x, unit, time must have equal length")
+  partial <- .partial_within_codes(x, cc$uid, cc$tid, cc$N, cc$T,
+                                   controls = controls)
+  xt <- partial$xt
+  yt <- .partial_outcome_codes(y, cc$uid, cc$tid, cc$N, cc$T, partial$Q)
+  Vn <- sum(xt^2)
+  if (Vn <= 1e-12 * max(sum(as.numeric(x)^2), 1))
+    stop("regressor has no within variation (collinear with the fixed effects)")
+  beta <- sum(xt * yt) / Vn
+  .score_concentration(xt, yt - beta * xt)
+}
+
 #' Module A diagnostic: variance-estimator adequacy under FE saturation
 #'
 #' Reproduces the user's FE regression of `y` on `x` with unit and time fixed
@@ -53,6 +92,7 @@ fe_leverage <- function(unit, time) {
 #'   name of the time variable in the model frame
 #' @param alpha nominal test level
 #' @param delta size-distortion tolerance
+#' @param controls optional numeric nuisance-covariate vector or matrix.
 #' @param ... passed between methods
 #' @return an object of class \code{AdequacyReport}
 #' @references Halkiewicz, S. M. S. Corrected diffuse-regime variance
@@ -67,21 +107,21 @@ leverage_report <- function(object, ...) UseMethod("leverage_report")
 #' @rdname leverage_report
 #' @export
 leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
-                                    delta = 0.05, ...) {
+                                    delta = 0.05, controls = NULL, ...) {
   y <- object
   cc <- .integer_codes(unit, time)
   uid <- cc$uid; tid <- cc$tid; N <- cc$N; T <- cc$T
   n <- length(uid)
   if (length(y) != n || length(x) != n)
     stop("y, x, unit, time must have equal length")
-  fd <- fe_dimension(uid, tid, N, T)
-  d_K <- fd$d_K
-  dof <- n - d_K - 1
-  if (dof <= 0) stop("no residual degrees of freedom (n - d_K - 1 = ", dof, " <= 0)")
-
-  xt <- .twoway_demean_codes(x, uid, tid, N, T)
-  yt <- .twoway_demean_codes(y, uid, tid, N, T)
-  tau_star2 <- sum(xt^2)
+  partial <- .partial_within_codes(x, uid, tid, N, T, controls = controls)
+  xt <- partial$xt
+  design <- .design_summary_codes(uid, tid, N, T, xt = xt)
+  d_K <- design$d_K
+  dof <- n - d_K - partial$rank - 1
+  if (dof <= 0) stop("no residual degrees of freedom after fixed effects, controls, and the target regressor (", dof, " <= 0)")
+  yt <- .partial_outcome_codes(y, uid, tid, N, T, partial$Q)
+  tau_star2 <- design$tau_star2
   if (tau_star2 <= 1e-12 * max(sum(as.numeric(x)^2), 1))
     stop("regressor has no within variation (collinear with the fixed effects)")
 
@@ -90,11 +130,12 @@ leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
   rss <- sum(u^2)
 
   p_fe <- .fe_leverage_codes(uid, tid, N, T)
-  H <- p_fe + xt^2 / tau_star2
+  h_controls <- if (partial$rank) rowSums(partial$Q^2) else rep(0, n)
+  H <- p_fe + h_controls + xt^2 / tau_star2
   maxH <- max(H)
   if (maxH >= 1 - 1e-10)
     stop("an observation has full leverage H_ii = 1; HC2/HC3 are undefined ",
-         "(degenerate cell \u2014 the diffuse framework's bounded-leverage condition fails)")
+         "(degenerate cell -- the diffuse framework's bounded-leverage condition fails)")
 
   hc0 <- sum(xt^2 * u^2)
   hc1 <- n / dof * hc0
@@ -133,8 +174,8 @@ leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
   if (flip)
     notes <- c(notes, "significance at level alpha flips across variance estimators; inference is estimator-dependent, and HC2 is the preferred member of the estimators reported here")
   # the two design conditions the corrected theory actually uses
-  lambda_n <- max(xt^2) / tau_star2                 # ass:des(ii)
-  n_eff <- 1 / sum((xt^2 / tau_star2)^2)
+  lambda_n <- design$lambda_n                       # ass:des(ii)
+  n_eff <- design$n_eff
   unif_gap <- max(abs(H - rho))                     # ass:hc(ii)
   Q_hat <- tau_star2 / (n * (1 - rho))              # lem:hess(b) deflation
   notes <- c(notes, sprintf(
@@ -153,20 +194,11 @@ leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
   verdict <- if (size_naive - alpha > delta || flip || lam_bad || unif_bad)
     "FLAGGED" else "CERTIFIED"
 
-  design <- structure(list(n = n, N = N, T = T, d_K = d_K, rho = rho,
-                           ncomponents = fd$ncomponents, tau_star2 = tau_star2),
-                      class = "DesignSummary")
-  score_mass <- sum(xt^2 * u^2)
-  if (score_mass > 0) {
-    score_share <- xt^2 * u^2 / score_mass
-    score_lambda_n <- max(score_share)
-    score_H_n <- sum(score_share^2)
-    score_n_eff <- 1 / score_H_n
+  score <- .score_concentration(xt, u)
+  if (is.finite(score$lambda_score)) {
     notes <- c(notes, sprintf(
       "realized score diagnostic (Paper A): lambda_score = %.4f, N_eff,score = %.1f. This is a one-realization warning statistic, not by itself a consistent population concentration estimate.",
-      score_lambda_n, score_n_eff))
-  } else {
-    score_lambda_n <- score_H_n <- score_n_eff <- NA_real_
+      score$lambda_score, score$n_eff_score))
   }
   statistic <- list(beta = beta, se_naive = se_naive, se_df = se_df,
                     se_hc0 = se_hc0, se_hc1 = se_hc1, se_hc2 = se_hc2,
@@ -174,8 +206,13 @@ leverage_report.default <- function(object, x, unit, time, alpha = 0.05,
                     max_leverage = maxH, max_fe_leverage = max(p_fe),
                     leverage_spread = spread, lambda_n = lambda_n,
                     n_eff = n_eff, uniform_leverage_gap = unif_gap,
-                    score_lambda_n = score_lambda_n, score_H_n = score_H_n,
-                    score_n_eff = score_n_eff,
+                    lambda_score = score$lambda_score,
+                    H_score = score$H_score,
+                    n_eff_score = score$n_eff_score,
+                    score_lambda_n = score$lambda_score,
+                    score_H_n = score$H_score,
+                    score_n_eff = score$n_eff_score,
+                    control_rank = partial$rank,
                     V_n = tau_star2, Q_hat = Q_hat,
                     implied_size_hc3 = size_hc3)
   .new_AdequacyReport("leverage", design, statistic, NULL, NULL, rho_dag,

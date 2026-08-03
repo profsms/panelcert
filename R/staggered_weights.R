@@ -205,9 +205,7 @@ twfe_design <- function(unit, time, first_treat, alpha = 0.05, delta = 0.05) {
   e_cell <- t_cell - g_cell
   G <- .restricted_gammas(ds$w, g_cell, e_cell, ds$N1)
   fd <- fe_dimension(uid, tid, N, T)
-  design <- structure(list(n = n, N = N, T = T, d_K = fd$d_K, rho = fd$d_K / n,
-                           ncomponents = fd$ncomponents, tau_star2 = ds$n_w),
-                      class = "DesignSummary")
+  design <- .design_summary_codes(uid, tid, N, T, xt = Dt)
   eta_dag <- .eta_dagger(alpha, delta)
   notes <- character(0)
   if (dr$n_drop > 0)
@@ -223,6 +221,21 @@ twfe_design <- function(unit, time, first_treat, alpha = 0.05, delta = 0.05) {
   notes <- c(notes, sprintf("pre-outcome: naive TWFE inference is size-controlled iff c/sigma <= %.3f (= eta-dagger/Gamma_c+e); supply the outcome (twfe_adequacy) to pilot c/sigma", breakdown))
   .new_AdequacyReport("twfe_heterogeneity", design, statistic, NULL, eta_dag,
                       breakdown, NULL, "INCONCLUSIVE", alpha, delta, notes)
+}
+
+#' TWFE design-statistic ladder
+#'
+#' Convenience accessor returning only the unrestricted, cohort, event-time,
+#' and combined additive design statistics from the adoption pattern.
+#'
+#' @inheritParams twfe_design
+#' @return A list with `unr`, `coh`, `evt`, `cmb`, `neg_share`, `N1`, and `n_w`.
+#' @export
+twfe_gammas <- function(unit, time, first_treat) {
+  s <- twfe_design(unit, time, first_treat)$statistic
+  list(unr = s$Gamma, coh = s$Gamma_coh, evt = s$Gamma_evt,
+       cmb = s$Gamma_cmb, neg_share = s$neg_share, N1 = s$N1,
+       n_w = s$n_w)
 }
 
 #' TWFE-heterogeneity adequacy (covariance-aware, wild-bootstrap)
@@ -351,9 +364,7 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
 
   eta_dag <- .eta_dagger(alpha, delta)
   verdict <- if (size_pt$cmb <= alpha + delta) "CERTIFIED" else "FLAGGED"
-  design <- structure(list(n = n, N = N, T = T, d_K = fd$d_K, rho = fd$d_K / n,
-                           ncomponents = fd$ncomponents, tau_star2 = ds$n_w),
-                      class = "DesignSummary")
+  design <- .design_summary_codes(uid, tid, N, T, xt = Dt)
   statistic <- list(Gamma = ds$Gamma, Gamma_coh = G$coh, Gamma_evt = G$evt,
                     Gamma_cmb = G$cmb, neg_share = ds$neg_share, psi_hat = psi_hat,
                     psi_driven = psi_driven, rho_ar1 = rho_ar1, Gamma_CR = CR$unr,

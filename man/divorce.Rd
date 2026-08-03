@@ -28,6 +28,8 @@ of Paper C's audit -- implied size 60\% under i.i.d. errors, 42\% after the
 cluster correction.
 }
 \examples{
+\donttest{
 twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
+}
 }
 \keyword{datasets}
