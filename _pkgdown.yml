@@ -8,7 +8,9 @@ reference:
     desc: Outcome-free panel geometry and one-row prevalence screens.
     contents:
       - design_summary
+      - applicable
       - adequacy_row
+      - print.DesignSummary
       - twoway_demean
       - multiway_demean
       - fe_dimension
@@ -18,6 +20,7 @@ reference:
       - leverage_report
       - fe_leverage
       - score_concentration
+      - print.AdequacyReport
   - title: Concentrated identifying variation
     desc: Paper A cycle packing, capture, and exact sign-flip inference.
     contents:
@@ -53,3 +56,4 @@ reference:
       - castle
       - divorce
       - fscore
+      - grunfeld
