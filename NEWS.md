@@ -1,3 +1,8 @@
+# panelcert 0.5.1
+
+- `cycle_report()` keeps all detailed caveats in `report$notes` but no longer prints them by default.
+- Added `show_notes(report)` and `print(report, notes = TRUE)` for an explicit, numbered display; structural `INCONCLUSIVE` reasons remain visible in the concise report.
+
 # panelcert 0.5.0
 
 * Bundle the canonical public-domain 11-firm Grunfeld panel used by Paper A's concentrated-regime showcase, with pinned source and version provenance.

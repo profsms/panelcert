@@ -25,6 +25,7 @@ reference:
     desc: Paper A cycle packing, capture, and exact sign-flip inference.
     contents:
       - cycle_report
+      - show_notes
       - cycle_capture
       - cycle_contrasts
       - contrast_system

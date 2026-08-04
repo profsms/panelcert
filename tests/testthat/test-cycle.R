@@ -227,6 +227,15 @@ test_that("report, verdicts and the 2^(1-C) floor", {
   repc <- cycle_report(y, xc, u, tt, nflips = 499, interval = FALSE)
   expect_identical(repc$verdict, "FLAGGED")
   expect_true(any(grepl("CONCENTRATION WARNING", repc$notes)))
+  concise <- paste(utils::capture.output(print(repc)), collapse = "\n")
+  expect_match(concise, "Diagnostic notes hidden", fixed = TRUE)
+  expect_false(grepl("CONCENTRATION WARNING", concise, fixed = TRUE))
+  expect_false(grepl("\nNote:", concise, fixed = TRUE))
+  detailed <- paste(utils::capture.output(print(repc, notes = TRUE)), collapse = "\n")
+  expect_match(detailed, "Diagnostic notes for", fixed = TRUE)
+  expect_match(detailed, "CONCENTRATION WARNING", fixed = TRUE)
+  standalone <- paste(utils::capture.output(show_notes(repc)), collapse = "\n")
+  expect_match(standalone, "1. ", fixed = TRUE)
 
   # too few supports for any level-alpha test to exist
   rep2 <- cycle_report(c(1, 3, 0, 2), c(1, 3, 0, 2), c(1, 2, 2, 1), c(1, 1, 2, 2),
@@ -236,6 +245,9 @@ test_that("report, verdicts and the 2^(1-C) floor", {
   expect_equal(rep2$statistic$min_pvalue, 1)
   expect_identical(rep2$verdict, "INCONCLUSIVE")   # 2^(1-1) = 1 > alpha
   expect_match(rep2$statistic$reason, "may repair", fixed = TRUE)
+  concise2 <- paste(utils::capture.output(print(rep2)), collapse = "\n")
+  expect_match(concise2, "Reason:", fixed = TRUE)
+  expect_match(concise2, "may repair", fixed = TRUE)
 
   # Binary-treatment granularity is structural, holding the panel fixed.
   unit_b <- rep(1:6, each = 2)

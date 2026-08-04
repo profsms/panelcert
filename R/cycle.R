@@ -793,6 +793,10 @@ signflip_interval <- function(y, x, unit = NULL, time = NULL, alpha = 0.05,
 #' @param interval whether to compute the exact confidence set.
 #' @param lambda_max concentration warning convention; Paper A's condition is
 #'   the sequence statement `lambda_n -> 0`, not a finite cutoff.
+#' @details Detailed diagnostic caveats remain in `report$notes` but are hidden
+#'   from the default display. Use [show_notes()] or
+#'   `print(report, notes = TRUE)` to show them; an `INCONCLUSIVE` reason remains
+#'   visible in the concise display.
 #' @return An `AdequacyReport`.
 #' @export
 cycle_report <- function(y, x, unit, time, alpha = 0.05, delta = 0.05,

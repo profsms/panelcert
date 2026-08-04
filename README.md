@@ -17,7 +17,7 @@ Install the current release from GitHub:
 
 ``` r
 install.packages("remotes")
-remotes::install_github("profsms/panelcert@v0.5.0")
+remotes::install_github("profsms/panelcert@v0.5.1")
 ```
 
 The r-universe build will be installable with
@@ -53,6 +53,10 @@ c(report$verdict, lambda_score = report$statistic$lambda_score, kappa = report$s
   conservative certificate.
 - `twfe_adequacy(y, unit, time, first_treat)` screens staggered-DiD/TWFE
   designs for heterogeneous-effect exposure.
+
+Default `cycle_report()` printing is concise. Detailed caveats remain
+available in `report$notes`, `show_notes(report)`, or
+`print(report, notes = TRUE)`.
 
 `adequacy_row(x, unit, time, y = NULL)` composes the design and capture
 diagnostics into one flat record for prevalence screens.

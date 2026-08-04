@@ -4,10 +4,13 @@
 \alias{print.AdequacyReport}
 \title{Print an adequacy report}
 \usage{
-\method{print}{AdequacyReport}(x, ...)
+\method{print}{AdequacyReport}(x, notes = x$pathology != "cycle_inference", ...)
 }
 \arguments{
 \item{x}{an \code{AdequacyReport}}
+
+\item{notes}{logical; whether to print detailed diagnostic notes. Defaults
+to `FALSE` for cycle-inference reports and `TRUE` for other reports.}
 
 \item{...}{unused}
 }
@@ -17,6 +20,6 @@
 \description{
 Renders the plain-language verdict block (spec section 2.2): design line,
 pathology-specific statistics, non-centrality vs threshold, implied size,
-and the VERDICT with any honesty caveats. The format is identical across
-the Julia, R, and Stata implementations.
+and the VERDICT. Cycle-inference caveats remain in `x$notes` and are shown
+only when requested.
 }
