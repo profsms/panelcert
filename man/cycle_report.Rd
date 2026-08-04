@@ -70,4 +70,9 @@ block and realized score concentration uses squared block scores
 not a theorem-level certificate; `FLAGGED` marks a concentration warning;
 and `INCONCLUSIVE` means the two-sided full-enumeration floor
 `2^(1-effective_C)` exceeds `alpha`.
+
+Detailed diagnostic caveats remain in `report$notes` but are hidden
+  from the default display. Use [show_notes()] or
+  `print(report, notes = TRUE)` to show them; an `INCONCLUSIVE` reason remains
+  visible in the concise display.
 }

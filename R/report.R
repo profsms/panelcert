@@ -114,14 +114,17 @@
 #'
 #' Renders the plain-language verdict block (spec section 2.2): design line,
 #' pathology-specific statistics, non-centrality vs threshold, implied size,
-#' and the VERDICT with any honesty caveats. The format is identical across
-#' the Julia, R, and Stata implementations.
+#' and the VERDICT. Cycle-inference caveats remain in `x$notes` and are shown
+#' only when requested.
 #'
 #' @param x an \code{AdequacyReport}
+#' @param notes logical; whether to print detailed diagnostic notes. Defaults
+#'   to `FALSE` for cycle-inference reports and `TRUE` for other reports.
 #' @param ... unused
 #' @return \code{x}, invisibly
 #' @export
-print.AdequacyReport <- function(x, ...) {
+print.AdequacyReport <- function(
+    x, notes = x$pathology != "cycle_inference", ...) {
   cat("Panel Adequacy Report \u2014 ", .PATHOLOGY_TITLES[[x$pathology]], "\n", sep = "")
   d <- x$design
   if (d$N > 0) {
@@ -151,7 +154,48 @@ print.AdequacyReport <- function(x, ...) {
   } else {
     cat(sprintf("VERDICT: %s at delta=%.2g", x$verdict, x$delta))
   }
-  for (note in x$notes) cat("\nNote: ", note, sep = "")
+  if (isTRUE(notes)) {
+    if (x$pathology == "cycle_inference") {
+      cat("\n")
+      .print_report_notes(x)
+    } else {
+      for (note in x$notes) cat("\nNote: ", note, sep = "")
+    }
+  } else if (x$pathology == "cycle_inference" && length(x$notes)) {
+    cat(sprintf(
+      "\nDiagnostic notes hidden (%d); call show_notes(report) to display them.",
+      length(x$notes)))
+  }
   cat("\n")
+  invisible(x)
+}
+
+.print_report_notes <- function(x) {
+  if (!length(x$notes)) {
+    cat("No diagnostic notes.\n")
+    return(invisible(NULL))
+  }
+  cat(sprintf("Diagnostic notes for %s (%d):\n",
+              .PATHOLOGY_TITLES[[x$pathology]], length(x$notes)))
+  for (i in seq_along(x$notes)) {
+    if (i > 1L) cat("\n")
+    cat(i, ". ", x$notes[[i]], "\n", sep = "")
+  }
+  invisible(NULL)
+}
+
+#' Display detailed diagnostic notes
+#'
+#' Prints the notes stored in an [AdequacyReport] as a numbered list. These
+#' notes remain programmatically available even when the default report display
+#' is concise.
+#'
+#' @param x an `AdequacyReport`.
+#' @return `x`, invisibly.
+#' @export
+show_notes <- function(x) {
+  if (!inherits(x, "AdequacyReport"))
+    stop("x must be an AdequacyReport")
+  .print_report_notes(x)
   invisible(x)
 }
