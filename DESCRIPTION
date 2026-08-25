@@ -1,7 +1,7 @@
 Package: panelcert
 Type: Package
 Title: Inference-Adequacy Diagnostics for Panel-Data Designs
-Version: 0.5.1
+Version: 0.6.0
 Authors@R: person("Stanislaw M. S.", "Halkiewicz", email = "stashal@o2.pl",
     role = c("aut", "cre"), comment = c(ORCID = "0009-0000-7344-7522"))
 Maintainer: Stanislaw M. S. Halkiewicz <stashal@o2.pl>
@@ -23,3 +23,4 @@ Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 URL: https://github.com/profsms/panelcert
 BugReports: https://github.com/profsms/panelcert/issues
+RoxygenNote: 7.3.1

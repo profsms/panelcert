@@ -1,4 +1,4 @@
-# Reference data now ships INSIDE the package: the four user-facing datasets
+# Reference data now ships INSIDE the package: the user-facing datasets
 # are lazy-loaded objects (data/), and the parity-only V-Dem gate-1 vintage is
 # a test fixture (tests/testthat/testdata/). The harness is therefore
 # self-contained and runs under R CMD check.

@@ -34,7 +34,8 @@ or the mean squared measurement-error SD}
 
 \item{alpha, delta, gamma, pilot}{as in [eiv_adequacy()]}
 
-\item{psi}{cluster variance-inflation factor (Paper B, Remark rem-cluster);
+\item{psi}{cluster variance-inflation factor (Remark rem-cluster in the
+accompanying measurement-error article);
 the \code{cluster} presets are unavailable without raw data}
 }
 \value{
@@ -47,10 +48,7 @@ exactly one of `reliability` or `sigma_nu2` (the mean squared
 measurement-error SD).
 }
 \examples{
-# PSID application (Paper B): flagged at the within reliability 0.65 ...
-eiv_adequacy_summary(0.733, 4.25, 83.2, n = 4165, d_K = 601,
-                     reliability = 0.65, pilot = "point")
-# ... but certified under person-clustered SEs (psi = 2.33; paper Table 4)
-eiv_adequacy_summary(0.733, 4.25, 83.2, n = 4165, d_K = 601,
-                     reliability = 0.65, pilot = "point", psi = 2.33)
+# Repeated-report twins application: both independent-report estimates flag.
+eiv_adequacy_summary(0.0908759, 1.0, (0.0219815^-2), n = 147, d_K = 4,
+                     reliability = 0.574904, pilot = "point")
 }

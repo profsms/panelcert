@@ -20,7 +20,7 @@ Install the current release from GitHub:
 
 ```r
 install.packages("remotes")
-remotes::install_github("profsms/panelcert@v0.5.1")
+remotes::install_github("profsms/panelcert@v0.6.0")
 ```
 
 The r-universe build will be installable with `install.packages("panelcert", repos = c("https://profsms.r-universe.dev", "https://cloud.r-project.org"))`. CRAN installation will be documented after acceptance.
@@ -38,7 +38,8 @@ c(report$verdict, lambda_score = report$statistic$lambda_score, kappa = report$s
 
 - `leverage_report(y, x, unit, time)` is the diffuse-regime diagnostic. It checks treatment concentration and leverage balance and compares df-corrected and HC0-HC3 inference.
 - `cycle_report(y, x, unit, time)` is the concentrated-regime workflow from Paper A. It reports capture, granularity, an exact sign-flip test, and an exact confidence set.
-- `eiv_adequacy(y, x, unit, time, ...)` screens continuous-regressor measurement error under Paper B's exact-normal mapping and conservative certificate.
+- `eiv_adequacy(y, x, unit, time, ...)` screens continuous-regressor measurement error under the article's exact-normal mapping and conservative certificate.
+- `reliability_from_repeats(first, second)` estimates within reliability from identically projected repeated measurements; use `method = "equal_variance"` only when that added restriction is defensible.
 - `twfe_adequacy(y, unit, time, first_treat)` screens staggered-DiD/TWFE designs for heterogeneous-effect exposure.
 
 Default `cycle_report()` printing is concise. Detailed caveats remain available
@@ -72,7 +73,7 @@ Measurement-error reports can additionally return `CERTIFIED` when the formal up
 
 The sibling Julia package is [PanelAdequacy.jl](https://github.com/profsms/PanelAdequacy.jl). Fixed CSV designs and CI enforce agreement to `1e-12` on numerical outputs and exact agreement on integer fields, verdicts, and packed supports.
 
-Dataset access follows language conventions: R exposes bundled panels through `LazyData`; Julia exposes `datasets()`, `datapath()`, and `load_dataset()`. Redistributable paper panels, including the public-domain canonical 11-firm Grunfeld showcase, are bundled for offline replication. `inst/DATA_SOURCES.md` records pinned provenance and explains why the KSS test extract uses a checksum-pinned direct download instead.
+Dataset access follows language conventions: R exposes bundled panels through `LazyData`; Julia exposes `datasets()`, `datapath()`, and `load_dataset()`. Redistributable paper panels, including the V-Dem panel, public repeated-report twins extract, and public-domain canonical 11-firm Grunfeld showcase, are bundled for offline replication. `inst/DATA_SOURCES.md` records pinned provenance and explains why the KSS test extract uses a checksum-pinned direct download instead.
 
 ## Citation
 

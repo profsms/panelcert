@@ -3,7 +3,7 @@
 \docType{data}
 \name{psid}
 \alias{psid}
-\title{Cornwell--Rupert PSID earnings panel (Paper B second application)}
+\title{Cornwell--Rupert PSID earnings panel}
 \format{
 A data frame with 4165 person-year rows and 4 variables:
 \describe{
@@ -21,9 +21,9 @@ psid
 }
 \description{
 Person--year panel of weeks worked and the log wage, the canonical noisy
-regressor of the validation literature. Used with an external reliability
-ratio (rather than a per-observation posterior) to show the fixed-effect
-transformation moving the same regressor from certified to flagged.
+regressor of the validation literature. Retained as a general panel example
+and for backward compatibility; it is not an application in the current
+measurement-error article.
 }
 \examples{
 eiv_adequacy(psid$wks, psid$lwage, psid$id, psid$year,

@@ -17,7 +17,7 @@ Install the current release from GitHub:
 
 ``` r
 install.packages("remotes")
-remotes::install_github("profsms/panelcert@v0.5.1")
+remotes::install_github("profsms/panelcert@v0.6.0")
 ```
 
 The r-universe build will be installable with
@@ -31,12 +31,15 @@ library(panelcert); data(grunfeld)
 applicable(grunfeld$capital, grunfeld$firm, grunfeld$year, controls = grunfeld$value)
 #> $ok
 #> [1] TRUE
-#>
+#> 
 #> $reason
 #> [1] "not a binary treatment; the binary granularity floor does not apply."
+```
+
+``` r
 report <- cycle_report(grunfeld$invest, grunfeld$capital, grunfeld$firm, grunfeld$year, controls = grunfeld$value, interval = FALSE)
 c(report$verdict, lambda_score = report$statistic$lambda_score, kappa = report$statistic$kappa)
-#>                            lambda_score               kappa
+#>                            lambda_score               kappa 
 #>           "FLAGGED" "0.738792811202239" "0.626959467924497"
 ```
 
@@ -49,8 +52,12 @@ c(report$verdict, lambda_score = report$statistic$lambda_score, kappa = report$s
   from Paper A. It reports capture, granularity, an exact sign-flip
   test, and an exact confidence set.
 - `eiv_adequacy(y, x, unit, time, ...)` screens continuous-regressor
-  measurement error under Paper B’s exact-normal mapping and
+  measurement error under the article’s exact-normal mapping and
   conservative certificate.
+- `reliability_from_repeats(first, second)` estimates within reliability
+  from identically projected repeated measurements; use
+  `method = "equal_variance"` only when that added restriction is
+  defensible.
 - `twfe_adequacy(y, unit, time, first_treat)` screens staggered-DiD/TWFE
   designs for heterogeneous-effect exposure.
 
@@ -108,11 +115,11 @@ exact agreement on integer fields, verdicts, and packed supports.
 
 Dataset access follows language conventions: R exposes bundled panels
 through `LazyData`; Julia exposes `datasets()`, `datapath()`, and
-`load_dataset()`. Redistributable paper panels, including the
-public-domain canonical 11-firm Grunfeld showcase, are bundled for
-offline replication. `inst/DATA_SOURCES.md` records pinned provenance
-and explains why the KSS test extract uses a checksum-pinned direct
-download instead.
+`load_dataset()`. Redistributable paper panels, including the V-Dem
+panel, public repeated-report twins extract, and public-domain canonical
+11-firm Grunfeld showcase, are bundled for offline replication.
+`inst/DATA_SOURCES.md` records pinned provenance and explains why the
+KSS test extract uses a checksum-pinned direct download instead.
 
 ## Citation
 

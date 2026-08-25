@@ -3,7 +3,7 @@
 
 .PATHOLOGY_TITLES <- c(
   leverage            = "Leverage / Variance (diffuse-regime companion)",
-  measurement_error   = "Measurement Error (Paper B)",
+  measurement_error   = "Measurement Error",
   twfe_heterogeneity  = "TWFE Heterogeneity (Paper C)",
   cycle_inference     = "Concentrated Identifying Variation (Paper A)"
 )

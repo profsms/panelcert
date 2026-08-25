@@ -3,7 +3,7 @@
 \docType{data}
 \name{vdem}
 \alias{vdem}
-\title{V-Dem democracy--growth panel (Paper B lead application)}
+\title{V-Dem democracy--growth measurement-error application}
 \format{
 A data frame with 8931 country-year rows and 9 variables:
 \describe{
@@ -23,7 +23,8 @@ V-Dem dataset (measurement-model posterior SDs); Maddison Project
 vdem
 }
 \description{
-Country--year panel used in the measurement-error application of Paper B:
+Country--year panel used in *Fixed-Effect Saturation Is Not Weak
+Identification*:
 log GDP per capita against continuous V-Dem institutional indices, each
 accompanied by the measurement model's posterior standard deviation (so the
 measurement-error input is data, not a calibration). The two-pole contrast

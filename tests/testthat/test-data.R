@@ -2,9 +2,10 @@
 # library(panelcert) they must be present, correctly shaped, and drive the
 # diagnostics directly with no external download.
 
-test_that("all five datasets ship and are correctly shaped", {
+test_that("all bundled datasets ship and are correctly shaped", {
   vdem    <- get_dataset("vdem")
   psid    <- get_dataset("psid")
+  twins   <- get_dataset("twins")
   castle  <- get_dataset("castle")
   divorce <- get_dataset("divorce")
   fscore  <- get_dataset("fscore")
@@ -14,6 +15,10 @@ test_that("all five datasets ship and are correctly shaped", {
   expect_true(all(c("iso", "year", "ly", "v2x_polyarchy", "v2x_polyarchy_sd") %in%
                     names(vdem)))
   expect_equal(dim(psid), c(4165L, 4L))
+  expect_equal(dim(twins), c(183L, 16L))
+  expect_equal(sum(stats::complete.cases(twins[c("DLHRWAGE", "DEDUC1", "DEDUC2",
+                                                 "DTEN", "DMARRIED", "DUNCOV")])),
+               147L)
   expect_equal(dim(castle), c(550L, 4L))
   expect_equal(dim(divorce), c(1377L, 4L))
   # ft convention preserved: NA = never-treated

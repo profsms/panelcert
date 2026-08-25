@@ -41,6 +41,5 @@ rem-cluster): \eqn{t^*} is deflated by \eqn{\sqrt{\psi}}. Uses the
 exact-inversion root \eqn{\eta^\dagger}.
 }
 \examples{
-breakdown_reliability(0.733, 4.25, 83.2)              # PSID: ~0.71
-breakdown_reliability(0.733, 4.25, 83.2, psi = 2.33)  # person-clustered: ~0.61
+breakdown_reliability(0.0908759, 0.5095233, 537.2959) # twins: ~0.864
 }

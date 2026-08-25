@@ -1,3 +1,13 @@
+# panelcert 0.6.0
+
+- Added `reliability_from_repeats()` with covariance and equal-variance methods.
+- Bundled the public Ashenfelter--Krueger twins extract and reproduced the
+  current twins table, including the Rouse correlated-report sensitivity.
+- Replaced obsolete PSID article locks while retaining the dataset for backward
+  compatibility; locked the Design 4/5 exact-normal endpoints at 3.58 and 3.67.
+- Corrected stale cluster-direction guidance and refreshed documentation and
+  data provenance.
+
 # panelcert 0.5.1
 
 - `cycle_report()` keeps all detailed caveats in `report$notes` but no longer prints them by default.

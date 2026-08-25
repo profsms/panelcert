@@ -23,5 +23,5 @@ the observed regressor and `sigma_nu = sqrt(1-r) * within_sd`. Set
 `sigma_nu = sqrt((1-r)/r) * within_sd`.
 }
 \examples{
-reliability_from_ratio(0.65, within_sd = 0.15)  # PSID within reliability
+reliability_from_ratio(0.75, within_sd = 0.15)
 }

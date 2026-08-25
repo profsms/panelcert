@@ -33,12 +33,13 @@ reference:
       - signflip_test
       - signflip_interval
   - title: Measurement error
-    desc: Paper B reliability, thresholds, clustering, and certificates.
+    desc: Reliability, exact-normal thresholds, clustering, and certificates.
     contents:
       - eiv_adequacy
       - eiv_adequacy_summary
       - reliability_from_interval
       - reliability_from_ratio
+      - reliability_from_repeats
       - breakdown_reliability
       - tau2_crit
       - eta_finite_n
@@ -54,6 +55,7 @@ reference:
     contents:
       - vdem
       - psid
+      - twins
       - castle
       - divorce
       - fscore

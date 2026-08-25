@@ -48,7 +48,7 @@ reliability_from_interval <- function(codelow, codehigh) {
 #' @param scale `"observed"` (default) or `"signal"`
 #' @return scalar measurement-error SD
 #' @examples
-#' reliability_from_ratio(0.65, within_sd = 0.15)  # PSID within reliability
+#' reliability_from_ratio(0.75, within_sd = 0.15)
 #' @export
 reliability_from_ratio <- function(r, within_sd,
                                    scale = c("observed", "signal")) {
@@ -58,6 +58,50 @@ reliability_from_ratio <- function(r, within_sd,
     stop("within_sd must be finite and non-negative")
   factor <- if (scale == "observed") sqrt(1 - r) else sqrt((1 - r) / r)
   factor * within_sd
+}
+
+#' Reliability from two measurements of the same regressor
+#'
+#' Apply the identical projection and complete-case sample to both measurements
+#' before calling this helper. The default covariance estimator is
+#' `cov(first_measure, second_measure) / var(first_measure)` and identifies the
+#' first measurement's reliability when the two classical reporting errors are
+#' uncorrelated; it does not require equal error variances. The
+#' `"equal_variance"` estimator is
+#' `1 - var(first_measure - second_measure) / (2 * var(first_measure))` and
+#' additionally imposes equal reporting-error variances.
+#'
+#' Correlation across reporting errors invalidates both formulas and must be
+#' modeled or examined as a sensitivity. The estimate is returned without
+#' truncation so assumption or sampling failures remain visible;
+#' [eiv_adequacy()] requires a reliability in `(0, 1]`.
+#'
+#' @param first_measure,second_measure numeric vectors containing two projected
+#'   measurements on the same complete-case sample.
+#' @param method `"covariance"` (default) or `"equal_variance"`.
+#' @return A scalar estimate of the first measurement's reliability.
+#' @examples
+#' x <- c(-2, -1, 1, 2)
+#' z <- c(-1.8, -1.2, 0.9, 2.1)
+#' reliability_from_repeats(x, z)
+#' reliability_from_repeats(x, z, method = "equal_variance")
+#' @export
+reliability_from_repeats <- function(first_measure, second_measure,
+                                     method = c("covariance", "equal_variance")) {
+  method <- match.arg(method)
+  if (length(first_measure) != length(second_measure))
+    stop("first_measure and second_measure must have equal length")
+  if (length(first_measure) < 2L)
+    stop("repeated measurements must contain at least two observations")
+  if (!is.numeric(first_measure) || !is.numeric(second_measure) ||
+      any(!is.finite(first_measure)) || any(!is.finite(second_measure)))
+    stop("repeated measurements must be finite numeric vectors on a common complete-case sample")
+  x <- first_measure - mean(first_measure)
+  z <- second_measure - mean(second_measure)
+  xx <- sum(x^2)
+  if (xx <= 0) stop("first_measure has zero variance")
+  if (method == "covariance") return(sum(x * z) / xx)
+  1 - sum((x - z)^2) / (2 * xx)
 }
 
 #' Self-consistent breakdown reliability
@@ -80,8 +124,7 @@ reliability_from_ratio <- function(r, within_sd,
 #' @param psi cluster variance-inflation factor (1 = i.i.d. standardization)
 #' @return the breakdown reliability in [0, 1]
 #' @examples
-#' breakdown_reliability(0.733, 4.25, 83.2)              # PSID: ~0.71
-#' breakdown_reliability(0.733, 4.25, 83.2, psi = 2.33)  # person-clustered: ~0.61
+#' breakdown_reliability(0.0908759, 0.5095233, 537.2959) # twins: ~0.864
 #' @export
 breakdown_reliability <- function(beta_star, sigma, tau_star2,
                                   alpha = 0.05, delta = 0.05, psi = 1) {
@@ -272,16 +315,14 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
 #'   or the mean squared measurement-error SD
 #' @param N,T optional design shape (0 = unknown)
 #' @param alpha,delta,gamma,pilot as in [eiv_adequacy()]
-#' @param psi cluster variance-inflation factor (Paper B, Remark rem-cluster);
+#' @param psi cluster variance-inflation factor (Remark rem-cluster in the
+#'   accompanying measurement-error article);
 #'   the \code{cluster} presets are unavailable without raw data
 #' @return an object of class \code{AdequacyReport}
 #' @examples
-#' # PSID application (Paper B): flagged at the within reliability 0.65 ...
-#' eiv_adequacy_summary(0.733, 4.25, 83.2, n = 4165, d_K = 601,
-#'                      reliability = 0.65, pilot = "point")
-#' # ... but certified under person-clustered SEs (psi = 2.33; paper Table 4)
-#' eiv_adequacy_summary(0.733, 4.25, 83.2, n = 4165, d_K = 601,
-#'                      reliability = 0.65, pilot = "point", psi = 2.33)
+#' # Repeated-report twins application: both independent-report estimates flag.
+#' eiv_adequacy_summary(0.0908759, 1.0, (0.0219815^-2), n = 147, d_K = 4,
+#'                      reliability = 0.574904, pilot = "point")
 #' @export
 eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
                                  reliability = NULL, sigma_nu2 = NULL,
@@ -459,11 +500,11 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
 #' when (N1) is in doubt, use [projection_compatibility()], which evaluates
 #' `sum_g ||M a^(g) - a^(g)||^2 / tau*2` directly and needs neither condition.
 #'
-#' In Paper B's V-Dem application country effects nest in country clusters
-#' while the 59 year effects do not, against `G = 163`, so `ratio_ne ~ 0.36`;
-#' in the PSID application person effects nest and the 7 year effects do not,
-#' against `G = 595`, giving `ratio_ne ~ 0.012`. Those two cluster-robust
-#' readings do not carry the same warrant.
+#' In the V-Dem application country effects nest in country clusters while the
+#' 59 year effects do not, against `G = 163`, so `ratio_ne ~ 0.36` and the
+#' direct diagnostic is load-bearing. The repeated-report twins application
+#' samples independent pairs and therefore uses the baseline i.i.d. theorem;
+#' it does not invoke this cluster condition or a `psi` rescaling.
 #'
 #' @param xt residualized regressor.
 #' @param cluster cluster identifier, one per observation.

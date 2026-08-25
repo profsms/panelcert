@@ -16,9 +16,9 @@ set.seed(3)
 
 ## The problem
 
-Fixed-effect saturation removes signal from the regressor while (largely)
-preserving measurement noise — the Griliches–Hausman amplification. Paper B
-shows the resulting size distortion of the naive t-test is governed by one
+Fixed-effect saturation can leave a noisy regressor with little reliable
+within variation. *Fixed-Effect Saturation Is Not Weak Identification* shows
+that the resulting size distortion of the naive t-test is governed by one
 number, the **within reliability**
 
 `lambda_hat = 1 - mean(sigma_nu^2) * (n - d_K) / tau_star2`,
@@ -38,16 +38,24 @@ Three pathways, in decreasing order of directness:
 1. **published measurement-model posteriors** (V-Dem-style):
    `codelow`/`codehigh` interval bounds, converted by
    `reliability_from_interval()`;
-2. **validation-study reliability ratios** (PSID-style):
+2. **repeated measurements on an identical projected sample**:
+   `reliability_from_repeats(first, second)`, using the covariance estimator
+   without an equal-error-variance restriction or `method = "equal_variance"`
+   when that additional restriction is defensible;
+3. **validation-study reliability ratios**:
    `reliability_from_ratio(r, within_sd)`;
-3. **direct** `sigma_nu` or `reliability` values, including a sensitivity grid.
+4. **direct** `sigma_nu` or `reliability` values, including a sensitivity grid.
+
+Both repeated-report formulas require uncorrelated reporting errors. If reports
+share person-specific error, supply a correlated-error reliability estimate or
+show a sensitivity range instead of treating either formula as identified.
 
 ## The honesty machinery, demonstrated
 
 The most natural implementation — plugging the attenuated `beta*` from the
 regression table into the threshold — is biased toward *certifying failing
 specifications*, by exactly the factor `lambda` whose smallness is the reason
-to run the diagnostic (Paper B, Proposition on pilots). The package defaults
+to run the diagnostic (the article's proposition on pilots). The package defaults
 to the corrected pilot at its upper confidence bound; the naive form is
 opt-in and labelled. On a design built to fail:
 
@@ -66,7 +74,7 @@ c(default = r_default$verdict, naive = r_naive$verdict)
 ```
 
 The naive pilot understates `|eta|` by the factor `lambda` and can certify a
-specification whose true size is several times nominal — in Paper B's V-Dem
+specification whose true size is several times nominal — in the V-Dem
 application it certifies the legislative-constraints index whose exact size is
 14%. The corrected default flags it.
 
@@ -79,10 +87,10 @@ Alongside the verdict, the report carries the **breakdown reliability**
 inference to pass — and the `sqrt(lambda)` **power tax**, which applies even
 to certified specifications.
 
-## The empirical poles (Paper B), reproduced from bundled data
+## The empirical applications, reproduced from bundled data
 
 The V-Dem democracy–growth panel ships with the package as `vdem` (the
-measurement-error SDs are published data). Paper B's two-pole result runs
+measurement-error SDs are published data). The article's two-pole result runs
 directly off it — no download:
 
 ```{r}
@@ -96,24 +104,52 @@ eiv_adequacy(l$ly, l$v2xlg_legcon, l$iso, l$year,
              sigma_nu = l$v2xlg_legcon_sd)$verdict
 ```
 
-The second application ships as `psid` (Cornwell–Rupert earnings): the
-within transformation alone moves the log wage from certified at the level
-reliability 0.82 to flagged across the validated within band 0.50–0.65.
+The second application ships as `twins`, the public repeated-report extract
+from the Ashenfelter--Krueger design. Both schooling reports must be projected
+on the identical controls and complete-case sample before estimating
+reliability.
 
 ```{r}
-eiv_adequacy(psid$wks, psid$lwage, psid$id, psid$year,
-             reliability = 0.65, pilot = "point")$verdict
+needed <- c("DLHRWAGE", "DEDUC1", "DEDUC2", "DTEN", "DMARRIED", "DUNCOV")
+d <- twins[complete.cases(twins[needed]), needed]
+fit <- lm(DLHRWAGE ~ DEDUC1 + DTEN + DMARRIED + DUNCOV, data = d)
+W <- model.matrix(~ DTEN + DMARRIED + DUNCOV, data = d)
+y <- qr.resid(qr(W), d$DLHRWAGE)
+x <- qr.resid(qr(W), d$DEDUC1)
+z <- qr.resid(qr(W), d$DEDUC2)
+lambda_cov <- reliability_from_repeats(x, z)
+lambda_equal <- reliability_from_repeats(x, z, method = "equal_variance")
+
+beta_star <- unname(coef(fit)["DEDUC1"])
+se_star <- unname(coef(summary(fit))["DEDUC1", "Std. Error"])
+tau_star2 <- sum(x^2)
+sigma <- se_star * sqrt(tau_star2)
+twins_cov <- eiv_adequacy_summary(beta_star, sigma, tau_star2, 147, 4,
+                                  reliability = lambda_cov, pilot = "point")
+twins_equal <- eiv_adequacy_summary(beta_star, sigma, tau_star2, 147, 4,
+                                    reliability = lambda_equal, pilot = "point")
+c(lambda_cov = lambda_cov, lambda_equal = lambda_equal,
+  breakdown = twins_cov$breakdown,
+  size_cov = twins_cov$implied_size, size_equal = twins_equal$implied_size)
 ```
+
+Both repeat models flag: reliability is 0.575 or 0.551 against a breakdown of
+0.864, with implied coverage 13.6% or 8.0%. Rouse's correlated-report
+sensitivity also flags (reliability 0.748 below breakdown 0.872) but gives much
+less extreme implied coverage, 67.9%. The verdict is robust to the reporting-
+error model; the magnitude is not. The similarity between the covariance-
+corrected coefficient and one directional IV estimate is algebraic, so it is
+corroboration rather than external validation.
 
 ## Cluster-robust standardization
 
-Applied panels cluster standard errors by unit, and since the non-centrality
-is bias over standard error, clustering mechanically deflates `|eta|` and the
-breakdown by `sqrt(psi_hat)` (Paper B, Remark rem-cluster). `cluster = "crve"`
-computes the by-unit Arellano variance-inflation factor; the i.i.d. verdict is
-an upper bound on the alarm. Paper B's middle case: legislative constraints is
-flagged under i.i.d. standard errors but certified under the country-clustered
-ones an applied author would report —
+Applied panels often cluster standard errors by unit. The package computes the
+realized Arellano variance-inflation factor with `cluster = "crve"` and rescales
+`|eta|` and the breakdown by `sqrt(psi_hat)`. The sign of `psi_hat - 1` is not
+fixed: clustering can soften or worsen the verdict, depending jointly on the
+regressor and error dependence. In the V-Dem middle case, legislative
+constraints is flagged under i.i.d. standard errors but obtains an uncertified
+point pass under the country-clustered ones an applied author would report —
 
 ```{r}
 eiv_adequacy(l$ly, l$v2xlg_legcon, l$iso, l$year,
@@ -125,5 +161,5 @@ eiv_adequacy(l$ly, l$v2xlg_legcon, l$iso, l$year,
 still leaves an implied size of 67%). Pass `psi =` to supply your own factor
 (e.g. in `eiv_adequacy_summary()`, where raw data is unavailable).
 
-Every number in Paper B's tables is reproduced this way; `data(package =
-"panelcert")` lists the bundled datasets.
+Every application entry in the article is regression-locked this way;
+`data(package = "panelcert")` lists the bundled datasets.

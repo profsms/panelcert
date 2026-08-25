@@ -2,9 +2,10 @@
 # applications). Shipped as lazy-loaded objects: after library(panelcert) they
 # are available by name, so the article applications run with no data download.
 
-#' V-Dem democracy--growth panel (Paper B lead application)
+#' V-Dem democracy--growth measurement-error application
 #'
-#' Country--year panel used in the measurement-error application of Paper B:
+#' Country--year panel used in *Fixed-Effect Saturation Is Not Weak
+#' Identification*:
 #' log GDP per capita against continuous V-Dem institutional indices, each
 #' accompanied by the measurement model's posterior standard deviation (so the
 #' measurement-error input is data, not a calibration). The two-pole contrast
@@ -27,12 +28,52 @@
 #' eiv_adequacy(d$ly, d$v2x_polyarchy, d$iso, d$year, sigma_nu = d$v2x_polyarchy_sd)
 "vdem"
 
-#' Cornwell--Rupert PSID earnings panel (Paper B second application)
+#' Ashenfelter--Krueger repeated-report twins extract
+#'
+#' Public teaching extract from the Ashenfelter--Krueger identical-twins design.
+#' Each twin reports both siblings' schooling, producing two measurements of the
+#' within-pair schooling difference. The article's controlled calculation uses
+#' the 147 complete rows on `DLHRWAGE`, `DEDUC1`, `DEDUC2`, `DTEN`, `DMARRIED`,
+#' and `DUNCOV`, applying the identical control projection and sample to both
+#' schooling reports.
+#'
+#' @format A data frame with 183 twin-pair rows and 16 variables:
+#' \describe{
+#'   \item{DLHRWAGE}{within-pair difference in log hourly wages}
+#'   \item{DEDUC1}{schooling difference from each twin's self-report}
+#'   \item{AGE}{age of the twin pair}
+#'   \item{AGESQ}{squared age}
+#'   \item{HRWAGEH}{hourly wage of the H-labelled twin}
+#'   \item{WHITEH}{white indicator for the H-labelled twin}
+#'   \item{MALEH}{male indicator for the H-labelled twin}
+#'   \item{EDUCH}{years of schooling of the H-labelled twin}
+#'   \item{HRWAGEL}{hourly wage of the L-labelled twin}
+#'   \item{WHITEL}{white indicator for the L-labelled twin}
+#'   \item{MALEL}{male indicator for the L-labelled twin}
+#'   \item{EDUCL}{years of schooling of the L-labelled twin}
+#'   \item{DEDUC2}{schooling difference from the co-twin reports}
+#'   \item{DTEN}{within-pair tenure difference}
+#'   \item{DMARRIED}{within-pair married-status difference}
+#'   \item{DUNCOV}{within-pair union-coverage difference}
+#' }
+#' @source `RbyExample::twins` version 0.0.100, attributed to Ashenfelter and
+#'   Krueger (1994), *American Economic Review* 84(5), 1157--1173. Upstream
+#'   package license: GPL (>= 2).
+#' @examples
+#' keep <- stats::complete.cases(twins[c("DLHRWAGE", "DEDUC1", "DEDUC2",
+#'                                       "DTEN", "DMARRIED", "DUNCOV")])
+#' W <- stats::model.matrix(~ DTEN + DMARRIED + DUNCOV, data = twins[keep, ])
+#' x <- qr.resid(qr(W), twins$DEDUC1[keep])
+#' z <- qr.resid(qr(W), twins$DEDUC2[keep])
+#' reliability_from_repeats(x, z)
+"twins"
+
+#' Cornwell--Rupert PSID earnings panel
 #'
 #' Person--year panel of weeks worked and the log wage, the canonical noisy
-#' regressor of the validation literature. Used with an external reliability
-#' ratio (rather than a per-observation posterior) to show the fixed-effect
-#' transformation moving the same regressor from certified to flagged.
+#' regressor of the validation literature. Retained as a general panel example
+#' and for backward compatibility; it is not an application in the current
+#' measurement-error article.
 #'
 #' @format A data frame with 4165 person-year rows and 4 variables:
 #' \describe{

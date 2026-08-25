@@ -1,5 +1,5 @@
-# Module B (Paper B): threshold constants, V-Dem two-pole (spec 7.2), gate-1
-# headline, PSID application, honesty machinery. Breakdown expectations are the
+# Module B: threshold constants, V-Dem, repeated-report twins, simulation-range
+# locks, and honesty machinery. Breakdown expectations are the
 # exact-inversion values (the stale linear ones must NOT reappear).
 
 vdem_spec <- function(v, xcol, sdcol) {
@@ -20,15 +20,24 @@ test_that("threshold constants (Paper B, Remark rem-exact-cv)", {
   expect_equal(PD$.noncentral_size(-1.3, 0.05), PD$.noncentral_size(1.3, 0.05))
   expect_equal(PD$.noncentral_size(PD$.eta_dagger(0.05, 0.05), 0.05), 0.10,
                tolerance = 1e-9)
+  expect_equal(PD$.noncentral_size(3.58, 0.05), 0.9474, tolerance = 5e-5)
+  expect_equal(PD$.noncentral_size(3.67, 0.05), 0.9564, tolerance = 5e-5)
 })
 
 test_that("reliability helpers", {
   expect_equal(reliability_from_interval(c(0.1, 0.2), c(0.3, 0.5)), c(0.1, 0.15))
   expect_equal(reliability_from_ratio(0.8, 2), sqrt(0.2) * 2)
   expect_equal(reliability_from_ratio(0.8, 2, scale = "signal"), sqrt(0.25) * 2)
+  xrep <- c(-2, -1, 1, 2); zrep <- c(-1.8, -1.2, 0.9, 2.1)
+  expect_equal(reliability_from_repeats(xrep, zrep),
+               stats::cov(xrep, zrep) / stats::var(xrep))
+  expect_equal(reliability_from_repeats(xrep, zrep, method = "equal_variance"),
+               1 - stats::var(xrep - zrep) / (2 * stats::var(xrep)))
   expect_error(reliability_from_ratio(1.2, 2))
   expect_error(reliability_from_ratio(0.8, -1))
   expect_error(reliability_from_interval(0.3, 0.2))
+  expect_error(reliability_from_repeats(1, 1))
+  expect_error(reliability_from_repeats(c(1, 2), 1))
 })
 
 test_that("primitive threshold uses exact inversion by default", {
@@ -126,40 +135,56 @@ test_that("reference case 2b: gate-1 headline (spec 7.2)", {
   expect_equal(r$statistic$beta_corr, 0.083, tolerance = 1e-3 / 0.083)
 })
 
-test_that("PSID application via summary form (Paper B app-psid)", {
-  bstar <- 0.7332110; sigma <- 4.2465084; tau2 <- 83.1775587
-  n <- 4165; d_K <- 595 + 7 - 1
+test_that("repeated-report twins application", {
+  tw <- get_dataset("twins")
+  needed <- c("DLHRWAGE", "DEDUC1", "DEDUC2", "DTEN", "DMARRIED", "DUNCOV")
+  d <- tw[stats::complete.cases(tw[needed]), needed]
+  fit <- stats::lm(DLHRWAGE ~ DEDUC1 + DTEN + DMARRIED + DUNCOV, data = d)
+  bstar <- unname(stats::coef(fit)[["DEDUC1"]])
+  se_star <- unname(stats::coef(summary(fit))["DEDUC1", "Std. Error"])
+  W <- stats::model.matrix(~ DTEN + DMARRIED + DUNCOV, data = d)
+  x <- qr.resid(qr(W), d$DEDUC1)
+  z <- qr.resid(qr(W), d$DEDUC2)
+  y <- qr.resid(qr(W), d$DLHRWAGE)
+  tau2 <- sum(x^2)
+  sigma <- se_star * sqrt(tau2)
+  lambda_cov <- reliability_from_repeats(x, z)
+  lambda_equal <- reliability_from_repeats(x, z, method = "equal_variance")
 
-  expect_equal(breakdown_reliability(bstar, sigma, tau2), 0.707,
-               tolerance = 2e-3 / 0.707)
-  # cluster-robust breakdown at the paper's person-cluster psi = 2.33: 0.61
-  expect_equal(breakdown_reliability(bstar, sigma, tau2, psi = 2.330), 0.613,
-               tolerance = 2e-3 / 0.613)
+  expect_equal(nrow(d), 147L)
+  expect_equal(bstar, 0.0908758941551, tolerance = 1e-11)
+  expect_equal(se_star, 0.0219814978882, tolerance = 1e-11)
+  expect_equal(lambda_cov, 0.5749036782323, tolerance = 1e-11)
+  expect_equal(lambda_equal, 0.5514169767299, tolerance = 1e-11)
 
-  r <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.65,
-                            pilot = "point")
-  expect_equal(r$eta, 0.848, tolerance = 2e-3 / 0.848)
-  expect_equal(r$implied_size, 0.1356, tolerance = 1e-3 / 0.1356)
-  expect_identical(r$verdict, "FLAGGED")
-  # ... but CERTIFIED under person clustering (paper Table 4: size 8.6%)
-  rpsi <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.65,
-                               pilot = "point", psi = 2.330)
-  expect_equal(rpsi$eta, 0.556, tolerance = 2e-3 / 0.556)
-  expect_equal(rpsi$implied_size, 0.086, tolerance = 1e-3 / 0.086)
-  expect_identical(rpsi$verdict, "POINT_PASS")
-  expect_equal(rpsi$breakdown, 0.613, tolerance = 2e-3 / 0.613)
+  rcov <- eiv_adequacy_summary(bstar, sigma, tau2, 147, 4,
+                               reliability = lambda_cov, pilot = "point")
+  req <- eiv_adequacy_summary(bstar, sigma, tau2, 147, 4,
+                              reliability = lambda_equal, pilot = "point")
+  expect_equal(rcov$breakdown, 0.863710397039, tolerance = 1e-7)
+  expect_equal(req$breakdown, rcov$breakdown, tolerance = 1e-13)
+  expect_equal(rcov$statistic$beta_corr, 0.1580715128394, tolerance = 1e-11)
+  expect_equal(req$statistic$beta_corr, 0.1648043096058, tolerance = 1e-11)
+  # This coefficient agreement is algebraic, not external validation.
+  expect_equal(rcov$statistic$beta_corr, sum(x * y) / sum(x * z), tolerance = 1e-11)
+  expect_equal(rcov$eta, 3.056917186720, tolerance = 1e-11)
+  expect_equal(req$eta, 3.363210998044, tolerance = 1e-11)
+  expect_equal(rcov$implied_size, 0.863669337612, tolerance = 1e-11)
+  expect_equal(req$implied_size, 0.919728454662, tolerance = 1e-11)
+  expect_identical(rcov$verdict, "FLAGGED")
+  expect_identical(req$verdict, "FLAGGED")
 
-  rp <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.82,
-                             pilot = "point")
-  expect_equal(rp$implied_size, 0.0638, tolerance = 1e-3 / 0.0638)
-  expect_identical(rp$verdict, "POINT_PASS")  # paper: point pass / formal fail
-  rf <- eiv_adequacy_summary(bstar, sigma, tau2, n, d_K, reliability = 0.82)
-  expect_identical(rf$verdict, "FLAGGED")   # formal certificate fails (paper ddagger)
-  expect_equal(rf$statistic$eta_upper, 0.707, tolerance = 2e-3 / 0.707)
+  rouse <- eiv_adequacy_summary(0.071, 1, 1 / 0.016^2, 445, 4,
+                                reliability = 0.748, pilot = "point")
+  expect_equal(rouse$breakdown, 0.871831787842, tolerance = 1e-7)
+  expect_equal(rouse$statistic$beta_corr, 0.0949197860963, tolerance = 1e-11)
+  expect_equal(rouse$eta, 1.494986631016, tolerance = 1e-11)
+  expect_equal(rouse$implied_size, 0.321249033980, tolerance = 1e-11)
+  expect_identical(rouse$verdict, "FLAGGED")
 
-  out <- paste(utils::capture.output(print(rf)), collapse = "\n")
-  expect_match(out, "n=4165")
-  expect_match(out, "d_K=601")
+  out <- paste(utils::capture.output(print(rcov)), collapse = "\n")
+  expect_match(out, "n=147")
+  expect_match(out, "d_K=4")
   expect_false(grepl("N=0", out))
 })
 

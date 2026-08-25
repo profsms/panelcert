@@ -72,7 +72,7 @@ test_that("AdequacyReport construction and printing", {
                               0.28, 0.652, 0.82, 0.053, "CERTIFIED", 0.05, 0.05,
                               "corrected, conservative pilot used")
   out <- paste(utils::capture.output(print(r)), collapse = "\n")
-  expect_match(out, "Panel Adequacy Report — Measurement Error \\(Paper B\\)")
+  expect_match(out, "Panel Adequacy Report.*Measurement Error")
   expect_match(out, "lambda_hat = 0.868")
   expect_match(out, "\\|eta\\| = 0.280")
   expect_match(out, "Threshold \\(delta=0.05\\) = 0.652")

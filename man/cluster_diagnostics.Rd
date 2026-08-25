@@ -47,9 +47,9 @@ So read \code{ratio_ne} and \code{max_energy} together: a small
 when (N1) is in doubt, use [projection_compatibility()], which evaluates
 `sum_g ||M a^(g) - a^(g)||^2 / tau*2` directly and needs neither condition.
 
-In Paper B's V-Dem application country effects nest in country clusters
-while the 59 year effects do not, against `G = 163`, so `ratio_ne ~ 0.36`;
-in the PSID application person effects nest and the 7 year effects do not,
-against `G = 595`, giving `ratio_ne ~ 0.012`. Those two cluster-robust
-readings do not carry the same warrant.
+In the V-Dem application country effects nest in country clusters while the
+59 year effects do not, against `G = 163`, so `ratio_ne ~ 0.36` and the
+direct diagnostic is load-bearing. The repeated-report twins application
+samples independent pairs and therefore uses the baseline i.i.d. theorem;
+it does not invoke this cluster condition or a `psi` rescaling.
 }
