@@ -8,10 +8,13 @@
 #   worst-case |eta| = (c/sigma) Gamma_S (Cor. cor-gamma); threshold
 #             (c/sigma) Gamma_{S,CR} <= eta-dagger (Cor. cor-cv).
 # Inference layer:
-#   cluster   Gamma_{S,CR} = Gamma_S/sqrt(psi), psi on the realized design.
+#   cluster   Gamma_{S,CR} = Gamma_S/sqrt(psi), with direct CR1 as the
+#             headline normalization and AR(1)/iid/user-supplied alternatives.
 #   pilot     COVARIANCE-AWARE (eq-pilot): c_S^2 = n_w max{0, (1/N1)||Pi_S d||^2
 #             - (1/N1) tr(Pi_S~ A Omega A' Pi_S~)}, Omega = Cov(hat Delta_{g,t})
 #             from a fixed-design wild cluster bootstrap.
+#   direction eta_dir,S = sqrt(n_w) (w-u)'P_S Delta_hat / q_hat, a signed
+#             companion to (not a replacement for) the worst-case envelope.
 # Always-treated units (adopted before the sample) are DROPPED (setup g >= 2).
 
 .treatment_indicator <- function(time, first_treat) {
@@ -96,7 +99,9 @@
 }
 
 # ---- group-time ATTs (not-yet-treated difference-in-means at (g,t)) ----------
-.group_time_atts <- function(uid, tid, ftc, y, N, T) {
+.group_time_atts <- function(uid, tid, ftc, y, N, T,
+                             controls = c("not_yet", "never")) {
+  controls <- match.arg(controls)
   Ymat <- matrix(NA_real_, N, T)
   Ymat[cbind(uid, tid)] <- y
   cohorts <- sort(unique(ftc[is.finite(ftc) & ftc > 1]))
@@ -104,7 +109,7 @@
   for (g in cohorts) {
     gunits <- which(ftc == g); base <- as.integer(g) - 1L
     for (t in as.integer(g):T) {
-      ctrl <- which(ftc > t)                       # not-yet + never
+      ctrl <- if (controls == "never") which(!is.finite(ftc)) else which(ftc > t)
       gd <- Ymat[gunits, t] - Ymat[gunits, base]
       cd <- Ymat[ctrl, t]  - Ymat[ctrl, base]
       gd <- gd[!is.na(gd)]; cd <- cd[!is.na(cd)]
@@ -143,24 +148,81 @@
        cmb = pil(bases$Bcmb, traces$cmb))
 }
 
+.directional_profile <- function(look, g_cell, t_cell, N1, B, w,
+                                 n_w, sigma, psi) {
+  delta <- .delta_cell(look, g_cell, t_cell, N1)
+  covered <- is.finite(delta)
+  if (!all(covered) || !is.finite(sigma) || sigma <= 0 ||
+      !is.finite(psi) || psi <= 0)
+    return(list(eta = NA_real_, alignment = NA_real_))
+  profile <- .proj(B, delta - mean(delta))
+  exposure <- .proj(B, w - 1 / N1)
+  bias <- sum(exposure * profile)
+  den <- sqrt(sum(exposure^2) * sum(profile^2))
+  list(eta = sqrt(n_w) * bias / (sigma * sqrt(psi)),
+       alignment = if (den > 0) bias / den else 0)
+}
+
+.group_time_map <- function(uid, tid, ftc, N, T,
+                            controls = c("not_yet", "never")) {
+  controls <- match.arg(controls)
+  n <- length(uid)
+  obs <- matrix(NA_integer_, N, T)
+  obs[cbind(uid, tid)] <- seq_len(n)
+  cohorts <- sort(unique(ftc[is.finite(ftc) & ftc > 1]))
+  keys <- list()
+  for (g in cohorts) for (tt in as.integer(g):T) {
+    ctrl <- if (controls == "never") which(!is.finite(ftc)) else which(ftc > tt)
+    gunits <- which(ftc == g)
+    gunits <- gunits[!is.na(obs[gunits, tt]) & !is.na(obs[gunits, g - 1L])]
+    ctrl <- ctrl[!is.na(obs[ctrl, tt]) & !is.na(obs[ctrl, g - 1L])]
+    if (length(gunits) && length(ctrl))
+      keys[[length(keys) + 1L]] <- c(as.integer(g), tt)
+  }
+  key_names <- vapply(keys, function(k) paste(k, collapse = "_"), "")
+  L <- matrix(0, n, length(keys))
+  for (j in seq_along(keys)) {
+    g <- keys[[j]][1]; tt <- keys[[j]][2]; base <- g - 1L
+    gunits <- which(ftc == g)
+    ctrl <- if (controls == "never") which(!is.finite(ftc)) else which(ftc > tt)
+    gunits <- gunits[!is.na(obs[gunits, tt]) & !is.na(obs[gunits, base])]
+    ctrl <- ctrl[!is.na(obs[ctrl, tt]) & !is.na(obs[ctrl, base])]
+    L[obs[gunits, tt], j] <- 1 / length(gunits)
+    L[obs[gunits, base], j] <- -1 / length(gunits)
+    L[obs[ctrl, tt], j] <- -1 / length(ctrl)
+    L[obs[ctrl, base], j] <- 1 / length(ctrl)
+  }
+  list(keys = keys, names = key_names, L = L)
+}
+
 # ---- fixed-design wild cluster bootstrap -------------------------------------
 .wild_bootstrap <- function(uid, tid, ftc, D, Dt, y, N, T, n_w, treated, N1,
-                            g_cell, t_cell, d_K, gt0, B, seed) {
+                            g_cell, t_cell, d_K, gt0, B, seed, controls) {
   n <- length(uid)
-  Umat <- matrix(0, n, N); Umat[cbind(seq_len(n), uid)] <- 1
-  Tmat <- matrix(0, n, T); Tmat[cbind(seq_len(n), tid)] <- 1
-  gtlab <- rep("none", n)
+  # Absorb unit and time effects before fitting the modest set of treated
+  # group-time indicators. This is algebraically the same saturated surface as
+  # [unit FE, time FE, treated (g,t)] without an n x N dummy matrix.
+  gtmap <- .group_time_map(uid, tid, ftc, N, T, controls)
+  keys_nm <- gtmap$names
+  m <- length(keys_nm)
+  Z <- matrix(0, n, m)
   treated_obs <- which(D == 1)
-  gtlab[treated_obs] <- paste(ftc[uid[treated_obs]], tid[treated_obs], sep = "_")
-  GTmat <- .indicator_basis(gtlab)
-  X <- cbind(Umat, Tmat, GTmat)
-  yhat <- as.numeric(X %*% (.pinv(crossprod(X)) %*% (t(X) %*% y)))
-  e <- y - yhat
-  keys_nm <- if (length(gt0$keys)) sort(vapply(gt0$keys, function(k) paste(k, collapse = "_"), "")) else character(0)
-  flat <- function(look_keys) look_keys
+  zcol <- match(paste(ftc[uid[treated_obs]], tid[treated_obs], sep = "_"), keys_nm)
+  keep_z <- !is.na(zcol)
+  Z[cbind(treated_obs[keep_z], zcol[keep_z])] <- 1
+  Zt <- vapply(seq_len(m), function(j)
+    .twoway_demean_codes(Z[, j], uid, tid, N, T), numeric(n))
+  yt <- .twoway_demean_codes(y, uid, tid, N, T)
+  fit <- as.numeric(Zt %*% (.pinv(crossprod(Zt)) %*% (t(Zt) %*% yt)))
+  e <- yt - fit
+  yhat <- y - e
+  att_center <- as.numeric(crossprod(gtmap$L, yhat))
+  score <- matrix(0, m, N)
+  for (j in seq_len(m))
+    score[j, ] <- rowsum(gtmap$L[, j] * e, uid, reorder = FALSE)[, 1L]
   dof <- n - d_K - 1
   set.seed(seed)
-  sig <- numeric(0); psi <- numeric(0); gtm <- list()
+  sig <- numeric(0); psi_ar1 <- numeric(0); psi_direct <- numeric(0); gtm <- list()
   for (b in seq_len(B)) {
     v <- sample(c(-1, 1), N, replace = TRUE)
     ystar <- yhat + v[uid] * e
@@ -169,20 +231,20 @@
     resid <- yt - beta * Dt
     s <- sqrt(sum(resid^2) / dof)
     rho <- .rho_ar1(resid, uid, tid)
-    p <- .psi_parametric(Dt, uid, tid, rho, kind = "ar1")
-    if (!is.finite(p) || p <= 0) next
-    gt <- .group_time_atts(uid, tid, ftc, ystar, N, T)
-    nm <- if (length(gt$keys)) vapply(gt$keys, function(k) paste(k, collapse = "_"), "") else character(0)
-    vec <- stats::setNames(rep(NA_real_, length(keys_nm)), keys_nm)
-    vec[nm] <- gt$vals
-    sig <- c(sig, s); psi <- c(psi, p); gtm[[length(gtm) + 1L]] <- vec
+    pa <- .psi_parametric(Dt, uid, tid, rho, kind = "ar1")
+    pd <- .psi_direct(Dt, resid, uid, n_w, s^2, N)
+    if (!is.finite(pa) || pa <= 0 || !is.finite(pd) || pd <= 0) next
+    vec <- stats::setNames(as.numeric(att_center + score %*% v), keys_nm)
+    sig <- c(sig, s); psi_ar1 <- c(psi_ar1, pa)
+    psi_direct <- c(psi_direct, pd); gtm[[length(gtm) + 1L]] <- vec
   }
-  G <- do.call(rbind, gtm)                # ndraw x m
-  Omega <- stats::cov(G)
-  list(Omega = Omega, sigma = sig, psi = psi, gtm = gtm, keys = keys_nm)
+  # Exact covariance under the fitted Rademacher wild-bootstrap distribution.
+  Omega <- score %*% t(score)
+  list(Omega = Omega, sigma = sig, psi_ar1 = psi_ar1,
+       psi_direct = psi_direct, gtm = gtm, keys = keys_nm)
 }
 
-#' Pre-outcome design vetting (Paper C design-statistic ladder)
+#' Pre-outcome TWFE design-statistic ladder
 #'
 #' The design statistic \code{Gamma = sqrt(N1)||w - u||} and its restricted
 #' variants \code{Gamma_coh}, \code{Gamma_evt}, \code{Gamma_c+e}
@@ -240,16 +302,21 @@ twfe_gammas <- function(unit, time, first_treat) {
 
 #' TWFE-heterogeneity adequacy (covariance-aware, wild-bootstrap)
 #'
-#' Restricted design-statistic ladder, cluster-robust rescaling
+#' Restricted design-statistic ladder, direct CR1 rescaling
 #' \code{Gamma_{S,CR} = Gamma_S/sqrt(psi)}, covariance-aware pilots
-#' \code{c_S/sigma} (eq-pilot; Omega from a fixed-design wild cluster bootstrap),
-#' the combined-class worst-case implied size (headline) with its bootstrap
-#' median and interval, and the verdict. Always-treated units are dropped.
+#' \code{c_S/sigma}, the combined-class worst-case size envelope, and the
+#' signed directional plug-in. Fixed-design wild-cluster intervals quantify
+#' uncertainty in both outcome-derived objects. Always-treated units are
+#' dropped.
 #' @param object outcome vector
 #' @param unit,time,first_treat as in [twfe_design()]
 #' @param alpha,delta level and size tolerance
-#' @param cluster "ar1" (default) or "iid"
-#' @param psi optional user-supplied variance-inflation factor
+#' @param cluster normalization: \code{"direct"} (default, the reported CR1
+#'   score scale), \code{"ar1"}, or \code{"iid"}
+#' @param psi optional positive user-supplied variance-inflation factor; when
+#'   supplied it overrides \code{cluster}
+#' @param controls comparison group for group-time effects: not-yet-treated
+#'   (including never-treated) or never-treated only
 #' @param bootstrap number of wild-cluster draws (>0 enables the covariance
 #'   correction and the size intervals)
 #' @param seed RNG seed for the wild bootstrap
@@ -262,9 +329,13 @@ twfe_adequacy <- function(object, ...) UseMethod("twfe_adequacy")
 #' @export
 twfe_adequacy.default <- function(object, unit, time, first_treat,
                                   alpha = 0.05, delta = 0.05,
-                                  cluster = c("ar1", "iid"), psi = NULL,
+                                  cluster = c("direct", "ar1", "iid"), psi = NULL,
+                                  controls = c("not_yet", "never"),
                                   bootstrap = 999L, seed = 20260715L, ...) {
-  y0 <- object; cluster <- match.arg(cluster)
+  y0 <- object; cluster <- match.arg(cluster); controls <- match.arg(controls)
+  if (!is.null(psi) && (!is.numeric(psi) || length(psi) != 1L ||
+                        !is.finite(psi) || psi <= 0))
+    stop("psi must be a single positive finite number")
   sc <- .staggered_codes(unit, time, first_treat)
   if (length(y0) != length(sc$uid)) stop("y must have length n = ", length(sc$uid))
   dr <- .drop_always_treated(sc$uid, sc$tid, sc$ftc)
@@ -289,28 +360,26 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
     notes <- c(notes, sprintf("%d always-treated unit(s) dropped (setup g >= 2)", dr$n_drop))
 
   rho_ar1 <- .rho_ar1(resid, uid, tid)
-  psi_driven <- .psi_driven(Dt, resid, uid, ds$n_w, sigma^2, N)
-  psi_hat <- if (!is.null(psi)) as.numeric(psi)
-             else if (cluster == "iid") 1 else .psi_parametric(Dt, uid, tid, rho_ar1, "ar1")
+  psi_ar1 <- .psi_parametric(Dt, uid, tid, rho_ar1, "ar1")
+  psi_direct <- .psi_direct(Dt, resid, uid, ds$n_w, sigma^2, N)
+  normalization <- if (!is.null(psi)) "user-supplied" else cluster
+  psi_hat <- if (!is.null(psi)) as.numeric(psi) else switch(
+    cluster, direct = psi_direct, ar1 = psi_ar1, iid = 1)
   CR <- list(unr = G$unr / sqrt(psi_hat), coh = G$coh / sqrt(psi_hat),
              evt = G$evt / sqrt(psi_hat), cmb = G$cmb / sqrt(psi_hat))
 
-  gt0 <- .group_time_atts(uid, tid, ftc, y, N, T)
+  gt0 <- .group_time_atts(uid, tid, ftc, y, N, T, controls)
   look0 <- .gt_lookup(gt0)
-  cm0 <- .cohort_means(gt0)
-  cell0 <- unname(cm0[as.character(g_cell)])
-  good0 <- !is.na(cell0)
-  att_bar <- if (sum(good0) >= 1) mean(cell0[good0]) else NA_real_
-  eta_real_iid <- if (sum(good0) >= 2)
-    (sum(ds$w[good0] * cell0[good0]) / sum(ds$w[good0]) - att_bar) * sqrt(ds$n_w) / sigma else NA_real_
-  eta_real_cr <- eta_real_iid / sqrt(psi_hat)
-
   bases <- list(Bcoh = G$Bcoh, Bevt = G$Bevt, Bcmb = G$Bcmb)
+  directional <- .directional_profile(
+    look0, g_cell, t_cell, ds$N1, G$Bcmb, ds$w,
+    ds$n_w, sigma, psi_hat
+  )
   boot <- NULL
   if (bootstrap > 0 && length(gt0$keys) > 0) {
     wb <- .wild_bootstrap(uid, tid, ftc, D, Dt, y, N, T, ds$n_w, ds$treated,
                           ds$N1, g_cell, t_cell, fd$d_K, gt0, as.integer(bootstrap),
-                          as.integer(seed))
+                          as.integer(seed), controls)
     keys_nm <- wb$keys
     kmat <- do.call(rbind, strsplit(keys_nm, "_"))
     A <- matrix(0, ds$N1, length(keys_nm))
@@ -325,18 +394,47 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
     size_pt <- list(coh = .noncentral_size(pilots$coh * CR$coh, alpha),
                     evt = .noncentral_size(pilots$evt * CR$evt, alpha),
                     cmb = .noncentral_size(pilots$cmb * CR$cmb, alpha))
-    draw_cmb <- numeric(0)
+    draw_envelope <- numeric(0); draw_directional <- numeric(0)
+    draw_directional_eta <- numeric(0); draw_alignment <- numeric(0)
+    draw_psi <- if (!is.null(psi)) rep(as.numeric(psi), length(wb$sigma)) else
+      switch(cluster, direct = wb$psi_direct, ar1 = wb$psi_ar1,
+             iid = rep(1, length(wb$sigma)))
     for (i in seq_along(wb$sigma)) {
       vec <- wb$gtm[[i]]
       look <- function(g, t) { z <- vec[paste(as.integer(g), t, sep = "_")]; if (is.na(z)) NA_real_ else unname(z) }
       p <- .cov_pilots(look, g_cell, t_cell, ds$N1, bases, traces, ds$n_w, wb$sigma[i])
-      draw_cmb <- c(draw_cmb, .noncentral_size(p$cmb * G$cmb / sqrt(wb$psi[i]), alpha))
+      draw_envelope <- c(draw_envelope,
+        .noncentral_size(p$cmb * G$cmb / sqrt(draw_psi[i]), alpha))
+      dp <- .directional_profile(look, g_cell, t_cell, ds$N1, G$Bcmb,
+                                 ds$w, ds$n_w, wb$sigma[i], draw_psi[i])
+      draw_directional_eta <- c(draw_directional_eta, dp$eta)
+      draw_directional <- c(draw_directional,
+                            .noncentral_size(dp$eta, alpha))
+      draw_alignment <- c(draw_alignment, dp$alignment)
     }
     q <- function(v, p) stats::quantile(v[is.finite(v)], p, names = FALSE)
-    boot <- list(n = length(wb$sigma), cmb_med = q(draw_cmb, 0.5),
-                 cmb_lo = q(draw_cmb, 0.025), cmb_hi = q(draw_cmb, 0.975),
-                 psi_lo = q(wb$psi, 0.025), psi_hi = q(wb$psi, 0.975),
+    boot <- list(n = length(wb$sigma),
+                 envelope_med = q(draw_envelope, 0.5),
+                 envelope_lo = q(draw_envelope, 0.025),
+                 envelope_hi = q(draw_envelope, 0.975),
+                 envelope_p95 = q(draw_envelope, 0.95),
+                 directional_med = q(draw_directional, 0.5),
+                 directional_lo = q(draw_directional, 0.025),
+                 directional_hi = q(draw_directional, 0.975),
+                 directional_eta_med = q(draw_directional_eta, 0.5),
+                 directional_eta_lo = q(draw_directional_eta, 0.025),
+                 directional_eta_hi = q(draw_directional_eta, 0.975),
+                 alignment_med = q(draw_alignment, 0.5),
+                 psi_lo = q(draw_psi, 0.025), psi_hi = q(draw_psi, 0.975),
+                 psi_direct_lo = q(wb$psi_direct, 0.025),
+                 psi_direct_hi = q(wb$psi_direct, 0.975),
+                 psi_ar1_lo = q(wb$psi_ar1, 0.025),
+                 psi_ar1_hi = q(wb$psi_ar1, 0.975),
                  Omega_trace_cmb = traces$cmb)
+    # v0.6 compatibility aliases; these are envelope, never realized-size, fields.
+    boot$cmb_med <- boot$envelope_med
+    boot$cmb_lo <- boot$envelope_lo
+    boot$cmb_hi <- boot$envelope_hi
     notes <- c(notes, sprintf("covariance-aware pilot (eq-pilot): Omega from %d wild-cluster draws", boot$n))
   } else {
     rawpil <- function(B) {
@@ -352,29 +450,40 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
     notes <- c(notes, "bootstrap disabled: pilots are RAW projected dispersion, upward-biased (set bootstrap>0)")
   }
 
-  if (psi_hat != 1) {
-    dir <- if (psi_hat > 1) "clustering shrinks the non-centrality here; iid size is an upper bound"
-           else "clustering WORSENS the distortion here (psi < 1)"
-    notes <- c(notes, sprintf("psi_hat = %.3f (AR(1) rho = %.3f): %s", psi_hat, rho_ar1, dir))
-  }
-  if (psi_hat > 0 && max(psi_driven / psi_hat, psi_hat / psi_driven) > 1.5)
-    notes <- c(notes, sprintf("estimator-driven cross-check psi = %.2f vs parametric %.2f", psi_driven, psi_hat))
+  notes <- c(notes, sprintf(
+    "normalization = %s: psi_hat = %.3f; direct CR1 psi = %.3f; AR(1) psi = %.3f (rho = %.3f)",
+    normalization, psi_hat, psi_direct, psi_ar1, rho_ar1))
+  if (!is.finite(directional$eta))
+    notes <- c(notes, "directional plug-in unavailable because the group-time profile does not cover every treated cell")
   if (N < 40)
     notes <- c(notes, sprintf("few clusters (G = %d): wild bootstrap refinements advisable (Rem. sec-clusters)", N))
+  if (T / N > 0.25)
+    notes <- c(notes, sprintf("fixed-T, many-cluster approximation is strained (G = %d, T = %d)", N, T))
 
   eta_dag <- .eta_dagger(alpha, delta)
   verdict <- if (size_pt$cmb <= alpha + delta) "CERTIFIED" else "FLAGGED"
   design <- .design_summary_codes(uid, tid, N, T, xt = Dt)
   statistic <- list(Gamma = ds$Gamma, Gamma_coh = G$coh, Gamma_evt = G$evt,
                     Gamma_cmb = G$cmb, neg_share = ds$neg_share, psi_hat = psi_hat,
-                    psi_driven = psi_driven, rho_ar1 = rho_ar1, Gamma_CR = CR$unr,
+                    normalization = normalization, psi_direct = psi_direct,
+                    psi_ar1 = psi_ar1, psi_driven = psi_direct,
+                    rho_ar1 = rho_ar1, Gamma_CR = CR$unr,
                     Gamma_coh_CR = CR$coh, Gamma_evt_CR = CR$evt, Gamma_cmb_CR = CR$cmb,
-                    beta = beta, sigma = sigma, att_bar = att_bar, N1 = ds$N1,
+                    beta = beta, sigma = sigma,
+                    se_cr1 = sigma * sqrt(psi_direct / ds$n_w),
+                    q_hat = sigma * sqrt(psi_direct),
+                    sign_reversal_rms = if (ds$Gamma > 0) abs(beta) / ds$Gamma else Inf,
+                    N1 = ds$N1,
                     n_w = ds$n_w, n_cohorts = length(gt0$cohorts),
                     pilot_coh = pilots$coh, pilot_evt = pilots$evt, pilot_cmb = pilots$cmb,
                     size_coh = size_pt$coh, size_evt = size_pt$evt, size_cmb = size_pt$cmb,
-                    size_realized = .noncentral_size(eta_real_cr, alpha),
-                    eta_real_cr = eta_real_cr, boot = boot)
+                    eta_directional = directional$eta,
+                    size_directional = .noncentral_size(directional$eta, alpha),
+                    directional_alignment = directional$alignment,
+                    # Deprecated v0.6 aliases retained for code compatibility.
+                    eta_real_cr = directional$eta,
+                    size_realized = .noncentral_size(directional$eta, alpha),
+                    controls = controls, boot = boot)
   .new_AdequacyReport("twfe_heterogeneity", design, statistic, pilots$cmb * CR$cmb,
                       eta_dag, eta_dag / CR$cmb, size_pt$cmb, verdict, alpha, delta, notes)
 }
@@ -396,7 +505,8 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
   }
   nwcr / n_w
 }
-.psi_driven <- function(Dt, resid, uid, n_w, sigma2, G) {
+.psi_direct <- function(Dt, resid, uid, n_w, sigma2, G) {
   meat <- rowsum(Dt * resid, uid)[, 1L]
   (G / (G - 1)) * sum(meat^2) / (n_w * sigma2)
 }
+.psi_driven <- .psi_direct

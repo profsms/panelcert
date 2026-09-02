@@ -2,7 +2,7 @@
 % Please edit documentation in R/staggered_weights.R
 \name{twfe_design}
 \alias{twfe_design}
-\title{Pre-outcome design vetting (Paper C design-statistic ladder)}
+\title{Pre-outcome TWFE design-statistic ladder}
 \usage{
 twfe_design(unit, time, first_treat, alpha = 0.05, delta = 0.05)
 }

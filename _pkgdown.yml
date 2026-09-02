@@ -46,7 +46,7 @@ reference:
       - cluster_diagnostics
       - projection_compatibility
   - title: TWFE heterogeneity
-    desc: Staggered-adoption design weights and Paper C adequacy diagnostics.
+    desc: Staggered-adoption design weights and TWFE adequacy diagnostics.
     contents:
       - twfe_design
       - twfe_gammas

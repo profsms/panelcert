@@ -20,8 +20,9 @@ twfe_adequacy(object, ...)
   first_treat,
   alpha = 0.05,
   delta = 0.05,
-  cluster = c("ar1", "iid"),
+  cluster = c("direct", "ar1", "iid"),
   psi = NULL,
+  controls = c("not_yet", "never"),
   bootstrap = 999L,
   seed = 20260715L,
   ...
@@ -36,9 +37,14 @@ twfe_adequacy(object, ...)
 
 \item{alpha, delta}{level and size tolerance}
 
-\item{cluster}{"ar1" (default) or "iid"}
+\item{cluster}{normalization: \code{"direct"} (default, the reported CR1
+score scale), \code{"ar1"}, or \code{"iid"}}
 
-\item{psi}{optional user-supplied variance-inflation factor}
+\item{psi}{optional positive user-supplied variance-inflation factor; when
+supplied it overrides \code{cluster}}
+
+\item{controls}{comparison group for group-time effects: not-yet-treated
+(including never-treated) or never-treated only}
 
 \item{bootstrap}{number of wild-cluster draws (>0 enables the covariance
 correction and the size intervals)}
@@ -49,9 +55,10 @@ correction and the size intervals)}
 an \code{AdequacyReport}
 }
 \description{
-Restricted design-statistic ladder, cluster-robust rescaling
+Restricted design-statistic ladder, direct CR1 rescaling
 \code{Gamma_{S,CR} = Gamma_S/sqrt(psi)}, covariance-aware pilots
-\code{c_S/sigma} (eq-pilot; Omega from a fixed-design wild cluster bootstrap),
-the combined-class worst-case implied size (headline) with its bootstrap
-median and interval, and the verdict. Always-treated units are dropped.
+\code{c_S/sigma}, the combined-class worst-case size envelope, and the
+signed directional plug-in. Fixed-design wild-cluster intervals quantify
+uncertainty in both outcome-derived objects. Always-treated units are
+dropped.
 }

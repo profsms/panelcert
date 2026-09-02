@@ -3,7 +3,7 @@
 \docType{data}
 \name{divorce}
 \alias{divorce}
-\title{No-fault-divorce adoption panel (Paper C, flagged pole)}
+\title{No-fault-divorce adoption panel (flagged application)}
 \format{
 A data frame with 1377 state-year rows and 4 variables:
 \describe{
@@ -15,17 +15,18 @@ A data frame with 1377 state-year rows and 4 variables:
 }
 \source{
 Stevenson and Wolfers divorce data (via the \pkg{bacondecomp}
-  distribution); analysis panel derived as in the Paper C audit.
+  distribution); analysis panel derived as in the TWFE-heterogeneity audit.
 }
 \usage{
 divorce
 }
 \description{
 State--year panel for the Stevenson--Wolfers no-fault-divorce design
-(Goodman-Bacon's pathology example): near-universal eventual adoption, a
-7.3\% negative-weight share, design statistic Gamma = 0.86. The flagged pole
-of Paper C's audit -- implied size 60\% under i.i.d. errors, 42\% after the
-cluster correction.
+(Goodman-Bacon's pathology example): near-universal eventual adoption.
+After the two always-treated states are dropped, the analysis design has a
+1.1\% negative-weight share and Gamma = 0.64. Its direct-CR1 point envelope
+is 41.5\%, but bootstrap uncertainty is wide and the fixed-\eqn{T} warning
+applies.
 }
 \examples{
 \donttest{

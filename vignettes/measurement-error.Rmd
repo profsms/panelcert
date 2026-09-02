@@ -17,7 +17,7 @@ set.seed(3)
 ## The problem
 
 Fixed-effect saturation can leave a noisy regressor with little reliable
-within variation. *Fixed-Effect Saturation Is Not Weak Identification* shows
+within variation. *Breakdown Reliability for Saturated Fixed-Effect Inference* shows
 that the resulting size distortion of the naive t-test is governed by one
 number, the **within reliability**
 

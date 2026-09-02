@@ -4,8 +4,8 @@
 .PATHOLOGY_TITLES <- c(
   leverage            = "Leverage / Variance (diffuse-regime companion)",
   measurement_error   = "Measurement Error",
-  twfe_heterogeneity  = "TWFE Heterogeneity (Paper C)",
-  cycle_inference     = "Concentrated Identifying Variation (Paper A)"
+  twfe_heterogeneity  = "TWFE Heterogeneity",
+  cycle_inference     = "Concentrated Identifying Variation"
 )
 
 .new_AdequacyReport <- function(pathology, design, statistic, eta, threshold,
@@ -46,7 +46,8 @@
       lines <- c(lines, sprintf("  restricted ladder: Gamma_c+e = %.3f | Gamma_evt = %.3f | Gamma_coh = %.3f",
                                 s$Gamma_cmb, s$Gamma_evt, s$Gamma_coh))
     if (has("Gamma_CR"))
-      lines <- c(lines, sprintf("Cluster-robust (psi_hat = %.3f): Gamma_c+e,CR = %.3f | Gamma_CR = %.3f",
+      lines <- c(lines, sprintf("Cluster normalization (%s; psi_hat = %.3f): Gamma_c+e,CR = %.3f | Gamma_CR = %.3f",
+                                if (has("normalization")) s$normalization else "legacy",
                                 s$psi_hat, s$Gamma_cmb_CR, s$Gamma_CR))
     if (has("beta"))
       lines <- c(lines, sprintf("TWFE beta_hat = %.4g   sigma = %.4g", s$beta, s$sigma))
@@ -54,14 +55,25 @@
       lines <- c(lines, sprintf("Covariance-corrected pilots c_S/sigma: c+e = %.3g | evt = %.3g | coh = %.3g",
                                 s$pilot_cmb, s$pilot_evt, s$pilot_coh))
     if (has("size_cmb"))
-      lines <- c(lines, sprintf("Worst-case size: combined-class = %.1f%% (headline) | cohort %.1f%% | event %.1f%%",
+      lines <- c(lines, sprintf("Worst-case size envelope: combined-class = %.1f%% (headline) | cohort %.1f%% | event %.1f%%",
                                 100 * s$size_cmb, 100 * s$size_coh, 100 * s$size_evt))
     if (has("boot") && !is.null(s$boot))
-      lines <- c(lines, sprintf("  wild bootstrap (B=%d): combined median %.1f%%, 95%% [%.1f, %.1f]; psi in [%.2f, %.2f]",
-                                s$boot$n, 100 * s$boot$cmb_med, 100 * s$boot$cmb_lo,
-                                100 * s$boot$cmb_hi, s$boot$psi_lo, s$boot$psi_hi))
-    if (has("size_realized"))
-      lines <- c(lines, sprintf("Realized-profile size (CR) = %.1f%%", 100 * s$size_realized))
+      lines <- c(lines, sprintf("  wild envelope (B=%d): median %.1f%%, 95%% [%.1f, %.1f]; psi in [%.2f, %.2f]",
+                                s$boot$n, 100 * s$boot$envelope_med,
+                                100 * s$boot$envelope_lo, 100 * s$boot$envelope_hi,
+                                s$boot$psi_lo, s$boot$psi_hi))
+    if (has("size_directional")) {
+      lines <- c(lines, sprintf("Directional plug-in: eta = %+.3f (alignment %+.3f), size %.1f%%",
+                                s$eta_directional, s$directional_alignment,
+                                100 * s$size_directional))
+      if (has("boot") && !is.null(s$boot))
+        lines <- c(lines, sprintf("  wild directional size: median %.1f%%, 95%% [%.1f, %.1f]",
+                                  100 * s$boot$directional_med,
+                                  100 * s$boot$directional_lo,
+                                  100 * s$boot$directional_hi))
+    }
+    if (has("sign_reversal_rms"))
+      lines <- c(lines, sprintf("Sign-reversal RMS threshold = %.4g", s$sign_reversal_rms))
   } else if (pathology == "cycle_inference" && has("kappa")) {
     lines <- c(lines, sprintf("Concentration: lambda_n = %.4f (N_eff = %.1f)",
                               s$lambda_n, s$n_eff))
@@ -136,7 +148,10 @@ print.AdequacyReport <- function(
   }
   for (line in .statistic_lines(x$pathology, x$statistic)) cat(line, "\n", sep = "")
   if (!is.null(x$eta)) {
-    cat(sprintf("Non-centrality |eta| = %.3f", abs(x$eta)))
+    if (x$pathology == "twfe_heterogeneity")
+      cat(sprintf("Worst-case |eta| envelope = %.3f", abs(x$eta)))
+    else
+      cat(sprintf("Non-centrality |eta| = %.3f", abs(x$eta)))
     if (!is.null(x$threshold))
       cat(sprintf("   Threshold (delta=%.2g) = %.3f", x$delta, x$threshold))
     cat("\n")
@@ -144,7 +159,9 @@ print.AdequacyReport <- function(
   if (!is.null(x$breakdown))
     cat(sprintf("Breakdown threshold = %.3f\n", x$breakdown))
   if (!is.null(x$implied_size))
-    cat(sprintf("Implied size of nominal %.0f%% test: %.1f%%\n",
+    cat(sprintf(if (x$pathology == "twfe_heterogeneity")
+                  "Worst-case size envelope for nominal %.0f%% test: %.1f%%\n"
+                else "Implied size of nominal %.0f%% test: %.1f%%\n",
                 100 * x$alpha, 100 * x$implied_size))
   if (x$verdict == "POINT_PASS") {
     cat(sprintf("VERDICT: POINT PASS at delta=%.2g (descriptive \u2014 not a certificate)",

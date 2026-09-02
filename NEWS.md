@@ -1,3 +1,24 @@
+# panelcert 0.7.0
+
+- Aligned the TWFE module with the current *Is Bias Correction Enough?*
+  theory: direct CR1 cluster-score normalization is now the default, while
+  AR(1), i.i.d., and user-supplied scales remain explicit sensitivity routes.
+- Separated the combined-class worst-case size envelope from the signed
+  directional plug-in. Reports now label the former as a uniform upper bound,
+  never as realized rejection probability, and expose directional alignment.
+- Replaced the dense fixed-effect bootstrap regression with an absorbed,
+  cluster-score implementation. This makes large panels practical while
+  retaining the covariance-aware group-time pilot.
+- Added the exact 15,988-row, 2,284-county Callaway--Sant'Anna minimum-wage
+  analysis extract and locked its 29.3% envelope, 27.8% directional diagnostic,
+  and sign-reversal calibration.
+- Added never-treated versus not-yet-treated comparison-group selection,
+  direct and AR(1) scale outputs, CR1 standard errors, sign-reversal RMS, and a
+  fixed-panel-length warning when `T` is large relative to the cluster count.
+- Retained `eta_real_cr`, `size_realized`, and the old bootstrap interval names
+  as deprecated compatibility aliases; they now point to explicitly named
+  directional or envelope fields.
+
 # panelcert 0.6.0
 
 - Added `reliability_from_repeats()` with covariance and equal-variance methods.

@@ -4,8 +4,8 @@
 
 #' V-Dem democracy--growth measurement-error application
 #'
-#' Country--year panel used in *Fixed-Effect Saturation Is Not Weak
-#' Identification*:
+#' Country--year panel used in *Breakdown Reliability for Saturated
+#' Fixed-Effect Inference*:
 #' log GDP per capita against continuous V-Dem institutional indices, each
 #' accompanied by the measurement model's posterior standard deviation (so the
 #' measurement-error input is data, not a calibration). The two-pole contrast
@@ -88,11 +88,11 @@
 #'              reliability = 0.65, pilot = "point")
 "psid"
 
-#' Castle-doctrine adoption panel (Paper C, certified pole)
+#' Castle-doctrine adoption panel (certified application)
 #'
 #' State--year panel for the Cheng--Hoekstra castle-doctrine design: a large
 #' never-treated reservoir, no negative weights, design statistic Gamma = 0.21.
-#' The certified pole of Paper C's two-design audit.
+#' The certified application in the TWFE-heterogeneity audit.
 #'
 #' @format A data frame with 550 state-year rows and 4 variables:
 #' \describe{
@@ -102,19 +102,20 @@
 #'   \item{y}{log homicide rate (outcome)}
 #' }
 #' @source Cheng and Hoekstra castle-doctrine replication data; analysis panel
-#'   derived as in the Paper C audit.
+#'   derived as in the TWFE-heterogeneity audit.
 #' @examples
 #' twfe_design(castle$uid, castle$tid, castle$ft)
 #' twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)
 "castle"
 
-#' No-fault-divorce adoption panel (Paper C, flagged pole)
+#' No-fault-divorce adoption panel (flagged application)
 #'
 #' State--year panel for the Stevenson--Wolfers no-fault-divorce design
-#' (Goodman-Bacon's pathology example): near-universal eventual adoption, a
-#' 7.3\% negative-weight share, design statistic Gamma = 0.86. The flagged pole
-#' of Paper C's audit -- implied size 60\% under i.i.d. errors, 42\% after the
-#' cluster correction.
+#' (Goodman-Bacon's pathology example): near-universal eventual adoption.
+#' After the two always-treated states are dropped, the analysis design has a
+#' 1.1\% negative-weight share and Gamma = 0.64. Its direct-CR1 point envelope
+#' is 41.5\%, but bootstrap uncertainty is wide and the fixed-\eqn{T} warning
+#' applies.
 #'
 #' @format A data frame with 1377 state-year rows and 4 variables:
 #' \describe{
@@ -124,12 +125,36 @@
 #'   \item{y}{female suicide rate per 100k (outcome)}
 #' }
 #' @source Stevenson and Wolfers divorce data (via the \pkg{bacondecomp}
-#'   distribution); analysis panel derived as in the Paper C audit.
+#'   distribution); analysis panel derived as in the TWFE-heterogeneity audit.
 #' @examples
 #' \donttest{
 #' twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
 #' }
 "divorce"
+
+#' Minimum-wage county panel (headline TWFE application)
+#'
+#' Exact balanced county--year panel for the unconditional specification in
+#' Callaway and Sant'Anna (2021). The current diagnostic uses never-treated counties as the
+#' comparison group. All treated-cell TWFE weights are positive, yet the
+#' additive cohort-plus-event class fails uniform inference certification.
+#'
+#' @format A data frame with 15,988 county-year rows and 4 variables:
+#' \describe{
+#'   \item{uid}{county id (unit)}
+#'   \item{tid}{year code, 1--7 (time)}
+#'   \item{ft}{first-treatment period; \code{NA} for never-treated counties}
+#'   \item{y}{log teen employment (outcome)}
+#' }
+#' @source Callaway and Sant'Anna (2021) public minimum-wage replication data;
+#'   exact published-sample extract used in the TWFE-heterogeneity article.
+#' @examples
+#' twfe_design(minimum_wage$uid, minimum_wage$tid, minimum_wage$ft)
+#' \donttest{
+#' twfe_adequacy(minimum_wage$y, minimum_wage$uid, minimum_wage$tid,
+#'               minimum_wage$ft, controls = "never", bootstrap = 19)
+#' }
+"minimum_wage"
 
 #' Piotroski F-Score / Visegrad firm panel (Paper A application)
 #'

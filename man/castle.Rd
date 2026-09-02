@@ -3,7 +3,7 @@
 \docType{data}
 \name{castle}
 \alias{castle}
-\title{Castle-doctrine adoption panel (Paper C, certified pole)}
+\title{Castle-doctrine adoption panel (certified application)}
 \format{
 A data frame with 550 state-year rows and 4 variables:
 \describe{
@@ -15,7 +15,7 @@ A data frame with 550 state-year rows and 4 variables:
 }
 \source{
 Cheng and Hoekstra castle-doctrine replication data; analysis panel
-  derived as in the Paper C audit.
+  derived as in the TWFE-heterogeneity audit.
 }
 \usage{
 castle
@@ -23,7 +23,7 @@ castle
 \description{
 State--year panel for the Cheng--Hoekstra castle-doctrine design: a large
 never-treated reservoir, no negative weights, design statistic Gamma = 0.21.
-The certified pole of Paper C's two-design audit.
+The certified application in the TWFE-heterogeneity audit.
 }
 \examples{
 twfe_design(castle$uid, castle$tid, castle$ft)

@@ -17,7 +17,7 @@ Install the current release from GitHub:
 
 ``` r
 install.packages("remotes")
-remotes::install_github("profsms/panelcert@v0.6.0")
+remotes::install_github("profsms/panelcert@v0.7.0")
 ```
 
 The r-universe build will be installable with
@@ -34,9 +34,6 @@ applicable(grunfeld$capital, grunfeld$firm, grunfeld$year, controls = grunfeld$v
 #> 
 #> $reason
 #> [1] "not a binary treatment; the binary granularity floor does not apply."
-```
-
-``` r
 report <- cycle_report(grunfeld$invest, grunfeld$capital, grunfeld$firm, grunfeld$year, controls = grunfeld$value, interval = FALSE)
 c(report$verdict, lambda_score = report$statistic$lambda_score, kappa = report$statistic$kappa)
 #>                            lambda_score               kappa 
@@ -58,8 +55,11 @@ c(report$verdict, lambda_score = report$statistic$lambda_score, kappa = report$s
   from identically projected repeated measurements; use
   `method = "equal_variance"` only when that added restriction is
   defensible.
-- `twfe_adequacy(y, unit, time, first_treat)` screens staggered-DiD/TWFE
-  designs for heterogeneous-effect exposure.
+- `twfe_adequacy(y, unit, time, first_treat)` reports the combined-class
+  worst-case size envelope and a signed directional plug-in. Direct CR1
+  cluster-score normalization is the default; `cluster = "ar1"`,
+  `cluster = "iid"`, and a positive user-supplied `psi` are sensitivity
+  routes.
 
 Default `cycle_report()` printing is concise. Detailed caveats remain
 available in `report$notes`, `show_notes(report)`, or
@@ -115,20 +115,23 @@ exact agreement on integer fields, verdicts, and packed supports.
 
 Dataset access follows language conventions: R exposes bundled panels
 through `LazyData`; Julia exposes `datasets()`, `datapath()`, and
-`load_dataset()`. Redistributable paper panels, including the V-Dem
-panel, public repeated-report twins extract, and public-domain canonical
-11-firm Grunfeld showcase, are bundled for offline replication.
-`inst/DATA_SOURCES.md` records pinned provenance and explains why the
-KSS test extract uses a checksum-pinned direct download instead.
+`load_dataset()`. Redistributable paper panels, including V-Dem,
+repeated-report twins, the 2,284-county minimum-wage application, and
+the public-domain canonical 11-firm Grunfeld showcase, are bundled for
+offline replication. `inst/DATA_SOURCES.md` records pinned provenance
+and explains why the KSS test extract uses a checksum-pinned direct
+download instead.
 
 ## Citation
 
-Please cite both working papers when the corresponding diagnostics are
-used:
+Please cite the corresponding working paper when a diagnostic is used:
 
 - Halkiewicz, Stanislaw M. S. (2026). *Exact Inference in Fixed-Effect
   Regressions with Concentrated Identifying Variation*.
-- Halkiewicz, Stanislaw M. S. (2026). *Fixed-Effect Saturation Is Not
-  Weak Identification: Certifying Inference under Measurement Error*.
+- Halkiewicz, Stanislaw M. S. (2026). *Breakdown Reliability for
+  Saturated Fixed-Effect Inference*.
+- Halkiewicz, Stanislaw M. S. (2026). *Is Bias Correction Enough? A
+  Design Diagnostic for TWFE Inference under Treatment-Effect
+  Heterogeneity*.
 
 Run `citation("panelcert")` for machine-readable package metadata.

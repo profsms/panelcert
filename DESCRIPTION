@@ -1,7 +1,7 @@
 Package: panelcert
 Type: Package
 Title: Inference-Adequacy Diagnostics for Panel-Data Designs
-Version: 0.6.0
+Version: 0.7.0
 Authors@R: person("Stanislaw M. S.", "Halkiewicz", email = "stashal@o2.pl",
     role = c("aut", "cre"), comment = c(ORCID = "0009-0000-7344-7522"))
 Maintainer: Stanislaw M. S. Halkiewicz <stashal@o2.pl>
@@ -11,7 +11,8 @@ Description: Implements exact nuisance-annihilating contrast inference for
     classical measurement error, or staggered-DiD treatment-effect
     heterogeneity. Reports design and realized-score concentration, capture,
     exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal
-    measurement-error thresholds, and TWFE design exposure.
+    measurement-error thresholds, and TWFE design exposure, direct
+    cluster-score worst-case envelopes, and directional diagnostics.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

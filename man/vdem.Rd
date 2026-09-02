@@ -23,8 +23,8 @@ V-Dem dataset (measurement-model posterior SDs); Maddison Project
 vdem
 }
 \description{
-Country--year panel used in *Fixed-Effect Saturation Is Not Weak
-Identification*:
+Country--year panel used in *Breakdown Reliability for Saturated
+Fixed-Effect Inference*:
 log GDP per capita against continuous V-Dem institutional indices, each
 accompanied by the measurement model's posterior standard deviation (so the
 measurement-error input is data, not a calibration). The two-pole contrast

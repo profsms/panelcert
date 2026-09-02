@@ -8,6 +8,7 @@ test_that("all bundled datasets ship and are correctly shaped", {
   twins   <- get_dataset("twins")
   castle  <- get_dataset("castle")
   divorce <- get_dataset("divorce")
+  minimum_wage <- get_dataset("minimum_wage")
   fscore  <- get_dataset("fscore")
 
   expect_s3_class(vdem, "data.frame")
@@ -21,6 +22,9 @@ test_that("all bundled datasets ship and are correctly shaped", {
                147L)
   expect_equal(dim(castle), c(550L, 4L))
   expect_equal(dim(divorce), c(1377L, 4L))
+  expect_equal(dim(minimum_wage), c(15988L, 4L))
+  expect_equal(length(unique(minimum_wage$uid)), 2284L)
+  expect_equal(length(unique(minimum_wage$tid)), 7L)
   # ft convention preserved: NA = never-treated
   expect_equal(sum(is.na(castle$ft)), 319)   # 29 never-treated states x 11 years
   expect_equal(sum(is.na(divorce$ft)), 540)  # 20 never-treated states x 27 years
