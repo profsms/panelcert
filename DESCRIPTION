@@ -12,7 +12,8 @@ Description: Implements exact nuisance-annihilating contrast inference for
     heterogeneity. Reports design and realized-score concentration, capture,
     exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal
     measurement-error thresholds, and TWFE design exposure, direct
-    cluster-score worst-case envelopes, and directional diagnostics.
+    cluster-score normalization, saturated group-time envelopes,
+    boundary-robust projected-norm certificates, and directional diagnostics.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

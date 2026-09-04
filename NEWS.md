@@ -1,20 +1,39 @@
 # panelcert 0.7.0
 
-- Aligned the TWFE module with the current *Is Bias Correction Enough?*
-  theory: direct CR1 cluster-score normalization is now the default, while
+- Added `certified_breakdown_reliability()` and exposed the paper's closed-form
+  certified threshold in every measurement-error report.
+- Separated coefficient and reliability uncertainty: `reliability_lower` and
+  `gamma_lambda` implement the lower-bound rule, while the existing `gamma`
+  argument remains the coefficient budget. Reports state when certification is
+  conditional on treating a reliability input as known/consistent.
+- Aligned the TWFE module with the current *Positive Weights Do Not Certify
+  TWFE Inference* theory: direct CR1 cluster-score normalization is now the default, while
   AR(1), i.i.d., and user-supplied scales remain explicit sensitivity routes.
-- Separated the combined-class worst-case size envelope from the signed
-  directional plug-in. Reports now label the former as a uniform upper bound,
-  never as realized rejection probability, and expose directional alignment.
+- Added the saturated post-treatment group-time class and verify its balanced-
+  panel identity `Gamma_gt = Gamma`. Reports now distinguish that full class
+  from the cohort, event-time, and additive cohort-plus-event-time ladder.
+- Replaced point-envelope certification by a one-sided confidence construction
+  for the projected group-time vector. The resulting HC2 projected-norm bounds
+  remain valid at zero heterogeneity; HC3 bounds are reported as a sensitivity
+  check. Trace-debiased quadratic pilots and percentile summaries remain
+  explicitly descriptive.
+- Separated all worst-case size envelopes from the signed directional plug-in.
+  Reports label the former as uniform upper bounds, never as realized rejection
+  probabilities, and expose directional alignment.
 - Replaced the dense fixed-effect bootstrap regression with an absorbed,
   cluster-score implementation. This makes large panels practical while
   retaining the covariance-aware group-time pilot.
 - Added the exact 15,988-row, 2,284-county Callaway--Sant'Anna minimum-wage
-  analysis extract and locked its 29.3% envelope, 27.8% directional diagnostic,
-  and sign-reversal calibration.
+  analysis extract. The reported target is now the equally weighted treated-
+  cell ATT (about -5.2%), matching the theory rather than the differently
+  weighted group aggregate. The saturated-class point envelope is about 31.6%,
+  and its projected-norm lower bound formally withholds certification.
 - Added never-treated versus not-yet-treated comparison-group selection,
   direct and AR(1) scale outputs, CR1 standard errors, sign-reversal RMS, and a
   fixed-panel-length warning when `T` is large relative to the cluster count.
+- Distinguished Gaussian mean-shift calculations from procedure-specific
+  finite-cluster inference: alternative standard errors or bootstrap tests are
+  not treated as drop-in changes to the Gaussian rejection map.
 - Retained `eta_real_cr`, `size_realized`, and the old bootstrap interval names
   as deprecated compatibility aliases; they now point to explicitly named
   directional or envelope fields.

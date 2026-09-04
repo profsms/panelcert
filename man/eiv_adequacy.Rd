@@ -6,7 +6,7 @@
 \alias{eiv_adequacy.lm}
 \alias{eiv_adequacy}
 \alias{eiv_adequacy.default}
-\title{Module B diagnostic: measurement-error adequacy (Paper B, flagship)}
+\title{Measurement-error adequacy diagnostic}
 \usage{
 \method{eiv_adequacy}{fixest}(object, ...)
 
@@ -28,6 +28,8 @@ eiv_adequacy(object, ...)
   alpha = 0.05,
   delta = 0.05,
   gamma = 0.05,
+  reliability_lower = NULL,
+  gamma_lambda = 0,
   pilot = c("conservative", "point", "naive"),
   cluster = c("iid", "crve", "ar1"),
   psi = NULL,
@@ -61,12 +63,19 @@ name of the time variable in the model frame}
 
 \item{delta}{size-distortion tolerance}
 
-\item{gamma}{level for the conservative certificate's upper bound}
+\item{gamma}{coefficient-uncertainty budget \eqn{\gamma_\beta}; the name is
+retained for backward compatibility}
+
+\item{reliability_lower}{optional lower confidence bound for within
+reliability. If omitted, the computed reliability is treated as
+known/consistent, so certification is conditional on that treatment.}
+
+\item{gamma_lambda}{coverage-error budget for \code{reliability_lower}}
 
 \item{pilot}{\code{"conservative"} (default), \code{"point"}, or
 \code{"naive"}}
 
-\item{cluster}{standardization of the t-test (Paper B, Remark rem-cluster):
+\item{cluster}{standardization of the t-test (cluster-robust extension):
 \code{"iid"} (default), \code{"crve"} (by-unit Arellano CR1
 variance-inflation), or \code{"ar1"} (parametric within-unit AR(1));
 \eqn{|\eta|} and the breakdown are deflated by \eqn{\sqrt{\hat\psi}}}
@@ -88,10 +97,10 @@ consumed directly from a fitted \pkg{fixest}, \pkg{plm}, or \code{lm} object
 \code{reliability} (the within reliability \eqn{\hat\lambda} directly).
 }
 \details{
-Correct-by-default honesty machinery (Paper B, protocol steps 4--5):
-\code{pilot = "conservative"} (default) evaluates the verdict at the upper
-\code{1 - gamma} confidence bound of the attenuation-corrected pilot
-\eqn{\hat\beta^*/\hat\lambda} --- the formal certificate; \code{"point"} is
+Correct-by-default honesty machinery: \code{pilot = "conservative"}
+(default) compares a reliability lower bound with the certified breakdown
+obtained by replacing \eqn{|t|} by \eqn{|t|+z_{1-\gamma_\beta}};
+\code{"point"} is
 the descriptive corrected-pilot verdict; \code{"naive"} plugs in the
 attenuated \eqn{\hat\beta^*} and is anti-conservative --- exposed for
 comparison only, and labelled as such in the report.
@@ -102,6 +111,6 @@ x <- rnorm(n) + 0.3 * unit; y <- 0.5 * x + rnorm(n)
 eiv_adequacy(y, x, unit, time, reliability = 0.9)
 }
 \references{
-Halkiewicz, S. M. S. Stock--Yogo critical values for
-  fixed-effect saturation under measurement error (Paper B).
+Halkiewicz, S. M. S. Breakdown Reliability for Saturated
+  Fixed-Effect Inference.
 }

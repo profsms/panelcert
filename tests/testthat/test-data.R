@@ -42,9 +42,11 @@ test_that("the paper applications run straight off the bundled data", {
   rb <- eiv_adequacy(d$ly, d$v2x_polyarchy, d$iso, d$year, sigma_nu = d$v2x_polyarchy_sd)
   expect_identical(rb$verdict, "CERTIFIED")
 
-  # Paper C flagged pole, verbatim from the dataset
+  # Paper C long-panel application, verbatim from the dataset. Its formal
+  # projected-norm interval crosses the threshold even though the point
+  # envelope is large.
   rc <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
-  expect_identical(rc$verdict, "FLAGGED")
+  expect_identical(rc$verdict, "INCONCLUSIVE")
 
   # Diffuse-regime companion application, verbatim from the dataset.
   ra <- leverage_report(log1p(fscore$ret), fscore$fscore, fscore$uid, fscore$year)

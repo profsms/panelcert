@@ -14,7 +14,7 @@ numeric vector of per-observation measurement-error SDs
 }
 \description{
 V-Dem convention: the interval brackets one posterior SD, so
-`sigma_nu = (codehigh - codelow)/2` (Paper B, lead application).
+`sigma_nu = (codehigh - codelow)/2` (lead application in the accompanying article).
 }
 \examples{
 reliability_from_interval(c(0.20, 0.31), c(0.24, 0.35))

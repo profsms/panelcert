@@ -8,7 +8,7 @@ vdem_spec <- function(v, xcol, sdcol) {
        x = v[[xcol]][keep], sd = v[[sdcol]][keep])
 }
 
-test_that("threshold constants (Paper B, Remark rem-exact-cv)", {
+test_that("threshold constants (measurement-error article)", {
   expect_equal(PD$.eta_dagger(0.05, 0.05), 0.652, tolerance = 5e-4 / 0.652)
   expect_equal(PD$.eta_dagger(0.05, 0.01), 0.295, tolerance = 5e-4 / 0.295)
   expect_equal(PD$.eta_quad(0.05, 0.05), 0.661, tolerance = 5e-4 / 0.661)
@@ -22,6 +22,14 @@ test_that("threshold constants (Paper B, Remark rem-exact-cv)", {
                tolerance = 1e-9)
   expect_equal(PD$.noncentral_size(3.58, 0.05), 0.9474, tolerance = 5e-5)
   expect_equal(PD$.noncentral_size(3.67, 0.05), 0.9564, tolerance = 5e-5)
+  eta_dag <- PD$.eta_dagger(0.05, 0.05)
+  z_beta <- stats::qnorm(0.95)
+  expect_equal(breakdown_reliability(2, 1, 1), 2 / (2 + eta_dag),
+               tolerance = 1e-12)
+  expect_equal(certified_breakdown_reliability(2, 1, 1),
+               (2 + z_beta) / (2 + z_beta + eta_dag), tolerance = 1e-12)
+  expect_gt(certified_breakdown_reliability(2, 1, 1),
+            breakdown_reliability(2, 1, 1))
 })
 
 test_that("reliability helpers", {
@@ -76,6 +84,15 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   rc <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd)
   expect_identical(rc$verdict, "CERTIFIED")   # conservative pilot: a certificate
   expect_gt(rc$statistic$eta_upper, rc$eta)
+  expect_equal(rc$statistic$breakdown_certified, 0.8513, tolerance = 2e-3)
+  expect_equal(rc$statistic$reliability_lower, rc$statistic$lambda_hat)
+  expect_equal(rc$statistic$false_certification_bound, 0.05)
+  rl <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
+                     reliability_lower = 0.80, gamma = 0.025,
+                     gamma_lambda = 0.025)
+  expect_identical(rl$verdict, "FLAGGED")
+  expect_equal(rl$statistic$reliability_lower, 0.80)
+  expect_equal(rl$statistic$false_certification_bound, 0.05)
   # cluster-robust (country CRVE): paper Table 3 psi_hat = 19.2, still certified
   rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
                       pilot = "point", cluster = "crve")
@@ -94,7 +111,7 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   expect_equal(r$implied_size, 0.1435, tolerance = 1e-3 / 0.1435)
   expect_equal(r$breakdown, 0.621, tolerance = 2e-3 / 0.621)  # fixed point (paper Table 3)
   expect_identical(r$verdict, "FLAGGED")
-  # the paper's middle case: flagged iid, CERTIFIED under country clustering
+  # the paper's middle case: flagged iid, point pass under country clustering
   rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
                       pilot = "point", cluster = "crve")
   expect_equal(rcr$statistic$psi_hat, 24.05, tolerance = 1e-2)
@@ -104,7 +121,7 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   # THE naive-pilot danger (Prop. prop-pilot(i)) on real data
   rn <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "naive")
   expect_equal(rn$eta, 0.8853 * 0.5472, tolerance = 1e-2)
-  expect_identical(rn$verdict, "POINT_PASS")  # the exact error Paper B prevents
+  expect_identical(rn$verdict, "POINT_PASS")  # the exact error the diagnostic prevents
   expect_true(any(grepl("ANTI-CONSERVATIVE", rn$notes)))
 
   s <- vdem_spec(v, "v2x_jucon", "v2x_jucon_sd")
@@ -201,6 +218,10 @@ test_that("input validation and edge cases", {
   expect_error(eiv_adequacy(y, x, uid, tid, codelow = x), "both codelow")
   expect_error(eiv_adequacy(y, x, uid, tid, sigma_nu = c(0.1, 0.2)))
   expect_error(eiv_adequacy(y, x, uid, tid, sigma_nu = -0.1))
+  expect_error(eiv_adequacy(y, x, uid, tid, reliability = 0.9,
+                            reliability_lower = 0))
+  expect_error(eiv_adequacy(y, x, uid, tid, reliability = 0.9,
+                            gamma_lambda = 0.96))
 
   rh <- eiv_adequacy(y, x, uid, tid, sigma_nu = 100)
   expect_identical(rh$verdict, "FLAGGED")

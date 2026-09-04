@@ -25,6 +25,7 @@ twfe_adequacy(object, ...)
   controls = c("not_yet", "never"),
   bootstrap = 999L,
   seed = 20260715L,
+  gamma = 0.05,
   ...
 )
 }
@@ -47,9 +48,11 @@ supplied it overrides \code{cluster}}
 (including never-treated) or never-treated only}
 
 \item{bootstrap}{number of wild-cluster draws (>0 enables the covariance
-correction and the size intervals)}
+correction, descriptive point summaries, and projected-norm bounds)}
 
 \item{seed}{RNG seed for the wild bootstrap}
+
+\item{gamma}{error probability for the projected-norm confidence set}
 }
 \value{
 an \code{AdequacyReport}
@@ -57,8 +60,9 @@ an \code{AdequacyReport}
 \description{
 Restricted design-statistic ladder, direct CR1 rescaling
 \code{Gamma_{S,CR} = Gamma_S/sqrt(psi)}, covariance-aware pilots
-\code{c_S/sigma}, the combined-class worst-case size envelope, and the
-signed directional plug-in. Fixed-design wild-cluster intervals quantify
-uncertainty in both outcome-derived objects. Always-treated units are
-dropped.
+\code{c_S/sigma}, saturated group-time and restricted point envelopes, and
+the signed directional plug-in. A fixed-design cluster-multiplier radius
+yields boundary-robust lower and upper bounds on the population envelope;
+point-envelope bootstrap percentiles remain descriptive. Always-treated
+units are dropped.
 }

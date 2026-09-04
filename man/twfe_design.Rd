@@ -18,7 +18,8 @@ an \code{AdequacyReport}
 }
 \description{
 The design statistic \code{Gamma = sqrt(N1)||w - u||} and its restricted
-variants \code{Gamma_coh}, \code{Gamma_evt}, \code{Gamma_c+e}
-(Prop. prop-restricted), the negative-weight share, and the breakdown ratio,
-from the adoption pattern alone. Always-treated units are dropped.
+variants \code{Gamma_coh}, \code{Gamma_evt}, \code{Gamma_c+e}, and
+\code{Gamma_gt} (Prop. prop-restricted), the negative-weight share, and the
+breakdown ratio from the adoption pattern alone. In a balanced panel,
+\code{Gamma_gt = Gamma}. Always-treated units are dropped.
 }

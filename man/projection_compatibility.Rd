@@ -34,7 +34,7 @@ A list with `ratio` (the quantity above; `NA` if the guard tripped),
   `G`, `n` and `cells`.
 }
 \description{
-Assumption ass-cluster(iv) of Paper B asks that
+Assumption ass-cluster(iv) of the accompanying article asks that
 \eqn{\sum_g \|M a^{(g)} - a^{(g)}\|^2 = o_p(\tau^{*2})}, where
 \eqn{a^{(g)}} is the residualized regressor restricted to cluster \eqn{g}.
 This function computes that ratio as it stands, for a two-way (unit and

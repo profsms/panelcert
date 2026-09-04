@@ -32,7 +32,7 @@ the breakdown reliability in [0, 1]
 \description{
 The fixed point \eqn{\lambda = \lambda^\dagger(\lambda)} when the corrected
 pilot \eqn{\beta^*/\lambda} is evaluated at the reliability being solved
-for (Paper B, Def. def-breakdown). Closed form
+for (Definition def-breakdown in the accompanying article). Closed form
 \eqn{\lambda^\dagger = t^*/(t^* + \eta^\dagger)} with
 \eqn{t^* = |\beta^*|\sqrt{\tau^{*2}}/\sigma} --- the specification's
 conventional t-statistic, so no noise input is needed. Under cluster-robust

@@ -10,6 +10,7 @@ test_that("block design: Gamma = 0 exactly (Prop. prop-gamma0)", {
   r <- twfe_design(unit, time, ft)
   expect_lt(r$statistic$Gamma, 1e-8)
   expect_lt(r$statistic$Gamma_cmb, 1e-8)
+  expect_lt(r$statistic$Gamma_gt, 1e-8)
   expect_equal(r$statistic$neg_share, 0)
   expect_identical(r$verdict, "CERTIFIED")
   expect_true(any(grepl("block", r$notes)))
@@ -24,9 +25,10 @@ test_that("three-cohort no-reservoir design (Gamma = 1.54); nested ladder", {
   expect_equal(st$neg_share, 0.11, tolerance = 0.01 / 0.11)
   expect_lte(st$Gamma_coh, st$Gamma_cmb + 1e-9)
   expect_lte(st$Gamma_evt, st$Gamma_cmb + 1e-9)
-  expect_lte(st$Gamma_cmb, st$Gamma + 1e-9)
+  expect_lte(st$Gamma_cmb, st$Gamma_gt + 1e-9)
+  expect_equal(st$Gamma_gt, st$Gamma, tolerance = 1e-10)
   expect_identical(r$verdict, "INCONCLUSIVE")
-  expect_equal(r$breakdown, PD$.eta_dagger(0.05, 0.05) / st$Gamma_cmb,
+  expect_equal(r$breakdown, PD$.eta_dagger(0.05, 0.05) / st$Gamma_gt,
                tolerance = 1e-10)
 })
 
@@ -37,6 +39,7 @@ test_that("castle design statistics (Table 4)", {
   expect_equal(c(r$design$N, r$design$T), c(50, 11))
   expect_equal(st$Gamma, 0.2114, tolerance = 1e-3 / 0.2114)
   expect_equal(st$Gamma_cmb, 0.198, tolerance = 5e-3 / 0.198)
+  expect_equal(st$Gamma_gt, st$Gamma, tolerance = 1e-10)
   expect_equal(st$Gamma_evt, 0.168, tolerance = 5e-3 / 0.168)
   expect_equal(st$Gamma_coh, 0.142, tolerance = 5e-3 / 0.142)
   expect_equal(st$neg_share, 0)
@@ -51,6 +54,7 @@ test_that("divorce design statistics (always-treated dropped; Table 4)", {
   expect_equal(r$design$n, 1323)
   expect_equal(st$Gamma, 0.6433, tolerance = 2e-3 / 0.6433)
   expect_equal(st$Gamma_cmb, 0.562, tolerance = 5e-3 / 0.562)
+  expect_equal(st$Gamma_gt, st$Gamma, tolerance = 1e-10)
   expect_equal(st$Gamma_evt, 0.468, tolerance = 5e-3 / 0.468)
   expect_equal(st$Gamma_coh, 0.381, tolerance = 5e-3 / 0.381)
   expect_equal(st$neg_share, 0.0115, tolerance = 2e-3)
@@ -58,7 +62,7 @@ test_that("divorce design statistics (always-treated dropped; Table 4)", {
   expect_true(any(grepl("always-treated", r$notes)))
 })
 
-test_that("castle inference: direct envelope certifies and direction is null", {
+test_that("castle inference: projected-norm upper bound certifies", {
   castle <- read_panel("castle_panel.csv")
   r <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
                      bootstrap = 299L, seed = 20260715L)
@@ -71,16 +75,22 @@ test_that("castle inference: direct envelope certifies and direction is null", {
   expect_equal(st$Gamma_cmb_CR, 0.1079, tolerance = 5e-3 / 0.1079)
   expect_equal(st$pilot_cmb, 0, tolerance = 1e-6)          # noise floor
   expect_equal(st$size_cmb, 0.05, tolerance = 2e-3)
+  expect_equal(st$Gamma_gt, st$Gamma, tolerance = 1e-10)
+  expect_equal(st$pilot_gt, 0.74787382, tolerance = 1e-7)
+  expect_equal(r$eta, 0.08610202, tolerance = 1e-7)
+  expect_equal(st$size_gt, 0.05085, tolerance = 2e-3)
+  expect_lt(st$K_upper_gt, r$threshold)
+  expect_gt(st$K_upper_gt_hc3, r$threshold)
   expect_equal(st$eta_directional, -0.0134423, tolerance = 1e-5)
   expect_equal(st$size_directional, 0.0500207, tolerance = 1e-5)
   expect_equal(st$directional_alignment, -0.164229, tolerance = 1e-5)
   expect_equal(st$sign_reversal_rms, 0.386972, tolerance = 1e-5)
   expect_equal(st$size_realized, st$size_directional, tolerance = 1e-12)
   expect_identical(r$verdict, "CERTIFIED")
-  expect_true(!is.null(st$boot) && st$boot$cmb_hi < 0.10)
+  expect_true(!is.null(st$boot) && !is.null(st$boot$norm))
 })
 
-test_that("divorce direct envelope is flagged but bootstrap is inconclusive", {
+test_that("divorce point envelope is large but norm bound is inconclusive", {
   divorce <- read_panel("divorce_panel.csv")
   r <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft,
                      bootstrap = 299L, seed = 20260715L)
@@ -96,10 +106,16 @@ test_that("divorce direct envelope is flagged but bootstrap is inconclusive", {
   expect_equal(st$sign_reversal_rms, 0.0245369, tolerance = 1e-5)
   expect_equal(st$pilot_cmb, 5.29888, tolerance = 1e-3)
   expect_equal(st$size_cmb, 0.414877, tolerance = 2e-3)
+  expect_equal(st$Gamma_gt, st$Gamma, tolerance = 1e-10)
+  expect_equal(st$pilot_gt, 6.59941945, tolerance = 1e-7)
+  expect_equal(r$eta, 2.48546963, tolerance = 1e-7)
+  expect_gt(st$size_gt, 0.65)
+  expect_lt(st$K_lower_gt, r$threshold)
+  expect_gt(st$K_upper_gt, r$threshold)
   expect_gt(st$size_coh, 0.10); expect_gt(st$size_evt, 0.10)
   expect_gte(st$size_cmb, st$size_coh - 1e-9)               # nesting
-  expect_identical(r$verdict, "FLAGGED")
-  expect_true(any(grepl("covariance-aware", r$notes)))
+  expect_identical(r$verdict, "INCONCLUSIVE")
+  expect_true(any(grepl("point pilot", r$notes)))
   expect_true(any(grepl("fixed-T", r$notes)))
 })
 
@@ -111,10 +127,15 @@ test_that("minimum-wage headline reproduces the JAE point diagnostics", {
   expect_equal(st$beta, -0.03660863, tolerance = 1e-7)
   expect_equal(st$Gamma, 0.26964309, tolerance = 1e-7)
   expect_equal(st$Gamma_cmb, 0.25728013, tolerance = 1e-7)
+  expect_equal(st$Gamma_gt, st$Gamma, tolerance = 1e-10)
   expect_equal(st$neg_share, 0, tolerance = 1e-12)
   expect_equal(st$psi_direct, 1.38489247, tolerance = 1e-7)
   expect_equal(st$pilot_cmb, 6.46943999, tolerance = 1e-7)
   expect_equal(st$size_cmb, 0.29304460, tolerance = 1e-7)
+  expect_equal(st$pilot_gt, 6.46015317, tolerance = 1e-7)
+  expect_equal(st$size_gt, 0.31599274, tolerance = 1e-7)
+  expect_equal(st$att_target, -0.05158099, tolerance = 1e-7)
+  expect_gt(st$K_lower_gt, r$threshold)
   expect_equal(st$eta_directional, 1.37026379, tolerance = 1e-7)
   expect_equal(st$size_directional, 0.27812971, tolerance = 1e-7)
   expect_equal(st$directional_alignment, 0.92476056, tolerance = 1e-7)
@@ -149,10 +170,11 @@ test_that("validation and rendering", {
     collapse = "\n")
   expect_match(out, "TWFE Heterogeneity")
   expect_match(out, "restricted ladder")
-  expect_match(out, "Worst-case size envelope")
+  expect_match(out, "Point worst-case envelopes")
+  expect_match(out, "Boundary-robust group-time K interval")
   expect_match(out, "Directional plug-in")
   expect_false(grepl("Realized-profile", out, fixed = TRUE))
-  expect_match(out, "VERDICT: CERTIFIED")
+  expect_match(out, "VERDICT: FORMALLY CERTIFIED")
   outd <- paste(utils::capture.output(
     print(twfe_design(castle$uid, castle$tid, castle$ft))), collapse = "\n")
   expect_match(outd, "negative-weight share")
@@ -162,4 +184,6 @@ test_that("validation and rendering", {
                              controls = "bad"), "arg")
   expect_error(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
                              psi = -1), "positive")
+  expect_error(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+                             gamma = 0.6), "gamma")
 })

@@ -6,7 +6,7 @@
 \alias{panelcert-package}
 \title{panelcert: Inference-Adequacy Diagnostics for Panel-Data Designs}
 \description{
-Implements exact nuisance-annihilating contrast inference for fixed-effect designs with concentrated identifying variation, and diagnoses when conventional inference is unreliable because of leverage, classical measurement error, or staggered-DiD treatment-effect heterogeneity. Reports design and realized-score concentration, capture, exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal measurement-error thresholds, and TWFE design exposure, direct cluster-score worst-case envelopes, and directional diagnostics.
+Implements exact nuisance-annihilating contrast inference for fixed-effect designs with concentrated identifying variation, and diagnoses when conventional inference is unreliable because of leverage, classical measurement error, or staggered-DiD treatment-effect heterogeneity. Reports design and realized-score concentration, capture, exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal measurement-error thresholds, and TWFE design exposure, direct cluster-score normalization, saturated group-time envelopes, boundary-robust projected-norm certificates, and directional diagnostics.
 }
 \details{
 Inference and diagnostics: [cycle_report()] and [contrast_system()] (Paper A,

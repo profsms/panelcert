@@ -12,9 +12,11 @@ twfe_gammas(unit, time, first_treat)
 \item{first_treat}{adoption time per observation (constant within unit; NA = never)}
 }
 \value{
-A list with `unr`, `coh`, `evt`, `cmb`, `neg_share`, `N1`, and `n_w`.
+A list with `unr`, `coh`, `evt`, `cmb`, `gt`, `neg_share`, `N1`,
+  and `n_w`.
 }
 \description{
-Convenience accessor returning only the unrestricted, cohort, event-time,
-and combined additive design statistics from the adoption pattern.
+Convenience accessor returning the unrestricted, cohort, event-time,
+combined additive, and saturated group-time design statistics from the
+adoption pattern.
 }

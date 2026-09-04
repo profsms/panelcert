@@ -20,7 +20,7 @@ A list with `G`, `max_size`, `min_size`, `max_energy`, `d_ne`,
   `ratio_ne` and `nested`.
 }
 \description{
-Assumption ass-cluster and Lemma lem-nest of Paper B. All are computable from
+Assumption ass-cluster and Lemma lem-nest of the accompanying article. All are computable from
 the design alone, before any outcome is examined.
 }
 \details{

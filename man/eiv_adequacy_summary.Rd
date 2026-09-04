@@ -17,6 +17,8 @@ eiv_adequacy_summary(
   alpha = 0.05,
   delta = 0.05,
   gamma = 0.05,
+  reliability_lower = NULL,
+  gamma_lambda = 0,
   pilot = c("conservative", "point", "naive"),
   psi = NULL
 )
@@ -32,7 +34,8 @@ or the mean squared measurement-error SD}
 
 \item{N, T}{optional design shape (0 = unknown)}
 
-\item{alpha, delta, gamma, pilot}{as in [eiv_adequacy()]}
+\item{alpha, delta, gamma, gamma_lambda, reliability_lower, pilot}{as in
+[eiv_adequacy()]}
 
 \item{psi}{cluster variance-inflation factor (Remark rem-cluster in the
 accompanying measurement-error article);

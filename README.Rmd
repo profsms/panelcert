@@ -38,7 +38,8 @@ c(report$verdict, lambda_score = report$statistic$lambda_score, kappa = report$s
 
 - `leverage_report(y, x, unit, time)` is the diffuse-regime diagnostic. It checks treatment concentration and leverage balance and compares df-corrected and HC0-HC3 inference.
 - `cycle_report(y, x, unit, time)` is the concentrated-regime workflow from Paper A. It reports capture, granularity, an exact sign-flip test, and an exact confidence set.
-- `eiv_adequacy(y, x, unit, time, ...)` screens continuous-regressor measurement error under the article's exact-normal mapping and conservative certificate.
+- `eiv_adequacy(y, x, unit, time, ...)` screens continuous-regressor measurement error under the article's exact-normal mapping and certificate. Supply `reliability_lower` and `gamma_lambda` when the reliability pilot is noisy; otherwise certification is explicitly conditional on treating the computed reliability as known/consistent.
+- `breakdown_reliability(...)` returns the descriptive point threshold, while `certified_breakdown_reliability(...)` adds the coefficient-uncertainty budget in closed form.
 - `reliability_from_repeats(first, second)` estimates within reliability from identically projected repeated measurements; use `method = "equal_variance"` only when that added restriction is defensible.
 - `twfe_adequacy(y, unit, time, first_treat)` reports the combined-class
   worst-case size envelope and a signed directional plug-in. Direct CR1
@@ -66,7 +67,7 @@ The regression diagnostics accept `controls =` for numeric nuisance covariates. 
 - `FLAGGED` marks a concentration or adequacy failure for which conventional inference is not licensed.
 - `INCONCLUSIVE` is returned when the enumeration floor `2^(1-effective_C)` exceeds `alpha`. Its `reason` distinguishes the coding-invariant binary-treatment floor based on `min(n_treated, n_untreated)`, which repacking cannot fix, from a selected packing that may be improved.
 
-Measurement-error reports can additionally return `CERTIFIED` when the formal upper-bound pilot passes.
+Measurement-error reports can additionally return `CERTIFIED` when the supplied reliability lower bound clears the certified breakdown. The report prints `gamma_beta`, `gamma_lambda`, and their total false-certification bound; the legacy keyword `gamma` denotes `gamma_beta`.
 
 ## Design-Only Use
 
@@ -84,6 +85,6 @@ Please cite the corresponding working paper when a diagnostic is used:
 
 - Halkiewicz, Stanislaw M. S. (2026). *Exact Inference in Fixed-Effect Regressions with Concentrated Identifying Variation*.
 - Halkiewicz, Stanislaw M. S. (2026). *Breakdown Reliability for Saturated Fixed-Effect Inference*.
-- Halkiewicz, Stanislaw M. S. (2026). *Is Bias Correction Enough? A Design Diagnostic for TWFE Inference under Treatment-Effect Heterogeneity*.
+- Halkiewicz, Stanislaw M. S. (2026). *Positive Weights Do Not Certify TWFE Inference*.
 
 Run `citation("panelcert")` for machine-readable package metadata.

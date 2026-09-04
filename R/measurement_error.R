@@ -1,4 +1,4 @@
-# Module B \u2014 measurement-error adequacy (spec section 4; Paper B).
+# Measurement-error adequacy for "Breakdown Reliability for Saturated Fixed-Effect Inference".
 # Formula sources: feasible non-centrality (Cor. cor-feasible); corrected pilot
 # beta*/lambda (Prop. prop-pilot); pilot se s_CR/(lambda sqrt(tau*2)) with
 # s_CR = sigma sqrt(psi) \u2014 the CLUSTER-ROBUST scale, not the i.i.d. sigma
@@ -19,7 +19,7 @@
 #' Measurement-error SDs from published credible-interval bounds
 #'
 #' V-Dem convention: the interval brackets one posterior SD, so
-#' `sigma_nu = (codehigh - codelow)/2` (Paper B, lead application).
+#' `sigma_nu = (codehigh - codelow)/2` (lead application in the accompanying article).
 #'
 #' @param codelow,codehigh interval bounds, one per observation
 #' @return numeric vector of per-observation measurement-error SDs
@@ -108,7 +108,7 @@ reliability_from_repeats <- function(first_measure, second_measure,
 #'
 #' The fixed point \eqn{\lambda = \lambda^\dagger(\lambda)} when the corrected
 #' pilot \eqn{\beta^*/\lambda} is evaluated at the reliability being solved
-#' for (Paper B, Def. def-breakdown). Closed form
+#' for (Definition def-breakdown in the accompanying article). Closed form
 #' \eqn{\lambda^\dagger = t^*/(t^* + \eta^\dagger)} with
 #' \eqn{t^* = |\beta^*|\sqrt{\tau^{*2}}/\sigma} --- the specification's
 #' conventional t-statistic, so no noise input is needed. Under cluster-robust
@@ -138,7 +138,41 @@ breakdown_reliability <- function(beta_star, sigma, tau_star2,
   t_star / (t_star + eta_dag)
 }
 
-#' Module B diagnostic: measurement-error adequacy (Paper B, flagship)
+#' Certified breakdown reliability
+#'
+#' Replaces the reported absolute t-statistic by
+#' \eqn{|t| + z_{1-\gamma_\beta}} in the point-breakdown formula:
+#' \deqn{\lambda^\dagger_{\gamma_\beta}=
+#' (|t|+z_{1-\gamma_\beta})/(|t|+z_{1-\gamma_\beta}+\eta^\dagger).}
+#' Compare the result with a known/consistent within reliability or a lower
+#' confidence bound. If that lower bound has coverage error
+#' \eqn{\gamma_\lambda}, the total false-certification bound is
+#' \eqn{\gamma_\beta+\gamma_\lambda}; the second budget belongs to the bound,
+#' not to this threshold formula.
+#'
+#' @inheritParams breakdown_reliability
+#' @param gamma_beta coefficient-uncertainty error budget in (0, 0.5]
+#' @return the certified breakdown reliability in [0, 1]
+#' @examples
+#' certified_breakdown_reliability(0.0908759, 0.5095233, 537.2959)
+#' @export
+certified_breakdown_reliability <- function(beta_star, sigma, tau_star2,
+                                             alpha = 0.05, delta = 0.05,
+                                             gamma_beta = 0.05, psi = 1) {
+  if (!is.finite(sigma) || sigma <= 0) stop("sigma must be positive")
+  if (!is.finite(tau_star2) || tau_star2 <= 0)
+    stop("tau_star2 must be positive")
+  if (!is.finite(psi) || psi <= 0) stop("psi must be positive")
+  if (!(is.numeric(gamma_beta) && length(gamma_beta) == 1L &&
+        is.finite(gamma_beta) && gamma_beta > 0 && gamma_beta <= 0.5))
+    stop("gamma_beta must be a single number in (0, 0.5]")
+  eta_dag <- .eta_dagger(alpha, delta)
+  t_reported <- abs(beta_star) * sqrt(tau_star2) / (sigma * sqrt(psi))
+  tz <- t_reported + stats::qnorm(1 - gamma_beta)
+  tz / (tz + eta_dag)
+}
+
+#' Measurement-error adequacy diagnostic
 #'
 #' Certifies whether naive inference on an already-estimated FE regression is
 #' size-controlled under classical measurement error in the regressor. The
@@ -149,10 +183,10 @@ breakdown_reliability <- function(beta_star, sigma, tau_star2,
 #' \code{codelow} + \code{codehigh} (V-Dem-style posterior interval bounds), or
 #' \code{reliability} (the within reliability \eqn{\hat\lambda} directly).
 #'
-#' Correct-by-default honesty machinery (Paper B, protocol steps 4--5):
-#' \code{pilot = "conservative"} (default) evaluates the verdict at the upper
-#' \code{1 - gamma} confidence bound of the attenuation-corrected pilot
-#' \eqn{\hat\beta^*/\hat\lambda} --- the formal certificate; \code{"point"} is
+#' Correct-by-default honesty machinery: \code{pilot = "conservative"}
+#' (default) compares a reliability lower bound with the certified breakdown
+#' obtained by replacing \eqn{|t|} by \eqn{|t|+z_{1-\gamma_\beta}};
+#' \code{"point"} is
 #' the descriptive corrected-pilot verdict; \code{"naive"} plugs in the
 #' attenuated \eqn{\hat\beta^*} and is anti-conservative --- exposed for
 #' comparison only, and labelled as such in the report.
@@ -169,12 +203,17 @@ breakdown_reliability <- function(beta_star, sigma, tau_star2,
 #' @param codelow lower posterior-interval bound (with \code{codehigh})
 #' @param codehigh upper posterior-interval bound (with \code{codelow})
 #' @param reliability the within reliability \eqn{\hat\lambda} in (0, 1]
+#' @param reliability_lower optional lower confidence bound for within
+#'   reliability. If omitted, the computed reliability is treated as
+#'   known/consistent, so certification is conditional on that treatment.
 #' @param alpha nominal test level
 #' @param delta size-distortion tolerance
-#' @param gamma level for the conservative certificate's upper bound
+#' @param gamma coefficient-uncertainty budget \eqn{\gamma_\beta}; the name is
+#'   retained for backward compatibility
+#' @param gamma_lambda coverage-error budget for \code{reliability_lower}
 #' @param pilot \code{"conservative"} (default), \code{"point"}, or
 #'   \code{"naive"}
-#' @param cluster standardization of the t-test (Paper B, Remark rem-cluster):
+#' @param cluster standardization of the t-test (cluster-robust extension):
 #'   \code{"iid"} (default), \code{"crve"} (by-unit Arellano CR1
 #'   variance-inflation), or \code{"ar1"} (parametric within-unit AR(1));
 #'   \eqn{|\eta|} and the breakdown are deflated by \eqn{\sqrt{\hat\psi}}
@@ -182,8 +221,8 @@ breakdown_reliability <- function(beta_star, sigma, tau_star2,
 #'   \code{cluster})
 #' @param ... passed between methods
 #' @return an object of class \code{AdequacyReport}
-#' @references Halkiewicz, S. M. S. Stock--Yogo critical values for
-#'   fixed-effect saturation under measurement error (Paper B).
+#' @references Halkiewicz, S. M. S. Breakdown Reliability for Saturated
+#'   Fixed-Effect Inference.
 #' @examples
 #' n <- 200; unit <- rep(1:20, each = 10); time <- rep(1:10, times = 20)
 #' x <- rnorm(n) + 0.3 * unit; y <- 0.5 * x + rnorm(n)
@@ -197,6 +236,8 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
                                  codelow = NULL, codehigh = NULL,
                                  reliability = NULL, alpha = 0.05,
                                  delta = 0.05, gamma = 0.05,
+                                 reliability_lower = NULL,
+                                 gamma_lambda = 0,
                                  pilot = c("conservative", "point", "naive"),
                                  cluster = c("iid", "crve", "ar1"),
                                  psi = NULL, ...) {
@@ -247,9 +288,9 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
 
   extra <- character(0)
   if (length(unique(x)) <= 2)
-    extra <- c(extra, "binary treatment detected: errors in binary treatments are MISCLASSIFICATION (nonclassical); this classical-EIV threshold does not apply (Paper B \u00a75.3)")
+    extra <- c(extra, "binary treatment detected: errors in binary treatments are MISCLASSIFICATION (nonclassical); this classical-EIV threshold does not apply (scope section of the measurement-error article)")
 
-  # cluster variance-inflation factor psi_hat (Paper B, Remark rem-cluster)
+  # cluster variance-inflation factor psi_hat (cluster-robust extension)
   rho_ar1 <- NULL
   if (!is.null(psi)) {
     psi_hat <- psi
@@ -279,7 +320,7 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
         if (length(cdiag$nested)) paste(cdiag$nested, collapse = ", ") else "none"))
     if (is.finite(cdiag$projection_ratio))
       extra <- c(extra, sprintf(
-        "direct projection-compatibility diagnostic chi_proj = %.5f = sum_g ||M a^(g)-a^(g)||^2/tau*2 (Paper B protocol). This finite-panel number evaluates the named sample quantity but does not itself prove the asymptotic sequence condition.",
+        "direct projection-compatibility diagnostic chi_proj = %.5f = sum_g ||M a^(g)-a^(g)||^2/tau*2 (measurement-error protocol). This finite-panel number evaluates the named sample quantity but does not itself prove the asymptotic sequence condition.",
         cdiag$projection_ratio))
     else
       extra <- c(extra, sprintf(
@@ -298,6 +339,8 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
   design <- .design_summary_codes(uid, tid, N, T, xt = xt)
   .eiv_core(design, beta_star, sigma, tau_star2, lambda, alpha = alpha,
             delta = delta, gamma = gamma, pilot = pilot, extra_notes = extra,
+            reliability_lower = reliability_lower,
+            gamma_lambda = gamma_lambda,
             psi_hat = psi_hat, rho_ar1 = rho_ar1, cluster_diag = cdiag)
 }
 
@@ -314,7 +357,8 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
 #' @param reliability,sigma_nu2 noise input (exactly one): within reliability,
 #'   or the mean squared measurement-error SD
 #' @param N,T optional design shape (0 = unknown)
-#' @param alpha,delta,gamma,pilot as in [eiv_adequacy()]
+#' @param alpha,delta,gamma,gamma_lambda,reliability_lower,pilot as in
+#'   [eiv_adequacy()]
 #' @param psi cluster variance-inflation factor (Remark rem-cluster in the
 #'   accompanying measurement-error article);
 #'   the \code{cluster} presets are unavailable without raw data
@@ -328,6 +372,8 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
                                  reliability = NULL, sigma_nu2 = NULL,
                                  N = 0L, T = 0L, alpha = 0.05, delta = 0.05,
                                  gamma = 0.05,
+                                 reliability_lower = NULL,
+                                 gamma_lambda = 0,
                                  pilot = c("conservative", "point", "naive"),
                                  psi = NULL) {
   pilot <- match.arg(pilot)
@@ -356,12 +402,15 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
                       class = "DesignSummary")
   .eiv_core(design, beta_star, sigma, tau_star2, lambda, alpha = alpha,
             delta = delta, gamma = gamma, pilot = pilot,
+            reliability_lower = reliability_lower,
+            gamma_lambda = gamma_lambda,
             extra_notes = character(0),
             psi_hat = if (is.null(psi)) 1 else psi)
 }
 
 .eiv_core <- function(design, beta_star, sigma, tau_star2, lambda, alpha,
                       delta, gamma, pilot, extra_notes,
+                      reliability_lower = NULL, gamma_lambda = 0,
                       psi_hat = 1, rho_ar1 = NULL, cluster_diag = NULL) {
   if (!(alpha > 0 && alpha < 1)) stop("alpha must lie in (0, 1)")
   if (!(delta > 0 && delta < 1 - alpha))
@@ -372,22 +421,31 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
   if (!is.finite(lambda) || lambda > 1)
     stop("reliability cannot exceed one and must be finite")
   if (!is.finite(psi_hat) || psi_hat <= 0) stop("psi must be positive")
-  # gamma must leave z_{1-gamma} >= 0 (Paper B, prop-certificate). At
+  # gamma is gamma_beta and must leave z_{1-gamma} >= 0. At
   # gamma > 1/2 the "upper" bound U_n = |beta0_corr| + z_{1-gamma} se would
   # DEFLATE the pilot, making the conservative verdict weaker than the point
   # verdict while still being labelled CERTIFIED.
   if (!(is.numeric(gamma) && length(gamma) == 1L && is.finite(gamma) &&
         gamma > 0 && gamma <= 0.5))
     stop("gamma must be a single number in (0, 0.5]: at gamma > 0.5 the certificate's upper confidence bound deflates rather than inflates the pilot and the verdict is no longer conservative")
+  if (!(is.numeric(gamma_lambda) && length(gamma_lambda) == 1L &&
+        is.finite(gamma_lambda) && gamma_lambda >= 0 && gamma_lambda < 1))
+    stop("gamma_lambda must be a single number in [0, 1)")
+  if (gamma + gamma_lambda >= 1)
+    stop("gamma + gamma_lambda must be less than one")
   eta_dag <- .eta_dagger(alpha, delta)
   sqpsi <- sqrt(psi_hat)
   notes <- extra_notes
 
   # fixed-point breakdown lambda-dagger = t*/(t* + eta-dagger),
-  # t* = |beta*| sqrt(tau*2)/sigma (Paper B Def. def-breakdown); under
+  # t* = |beta*| sqrt(tau*2)/sigma (Definition def-breakdown); under
   # clustering t* is deflated by sqrt(psi)
   t_star <- abs(beta_star) * sqrt(tau_star2) / sigma
-  breakdown <- (t_star / sqpsi) / (t_star / sqpsi + eta_dag)
+  t_reported <- t_star / sqpsi
+  breakdown <- t_reported / (t_reported + eta_dag)
+  z_beta <- stats::qnorm(1 - gamma)
+  certified_breakdown <- (t_reported + z_beta) /
+    (t_reported + z_beta + eta_dag)
 
   if (lambda <= 0) {
     notes <- c(notes, sprintf(
@@ -400,6 +458,11 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
                                eta_dag, breakdown, 1, "FLAGGED", alpha, delta,
                                notes))
   }
+
+  ell <- if (is.null(reliability_lower)) lambda else reliability_lower
+  if (!(is.numeric(ell) && length(ell) == 1L && is.finite(ell) &&
+        ell > 0 && ell <= 1))
+    stop("reliability_lower must be a single number in (0, 1]")
 
   # Cluster-robust scale (cor-cluster-feasible): s_CR^2 = sigma_CJN^2 * psi =
   # V^sc_CR / tau*2, an algebraic identity. EVERY scale below is s_CR --
@@ -414,33 +477,36 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
   eta_point <- (b_pilot / s_CR) * (1 - lambda) * sqrt(tau_star2)
   eta_upper <- NULL
   if (pilot == "conservative")
-    eta_upper <- ((abs(beta_corr) + stats::qnorm(1 - gamma) * se_corr) / s_CR) *
-      (1 - lambda) * sqrt(tau_star2)
+    eta_upper <- (t_reported + z_beta) * (1 - ell) / ell
   eta_used <- if (pilot == "conservative") eta_upper else eta_point
 
   # rem-plugin: only the certificate is size-controlled. A passing point pilot
   # is a POINT PASS, not a certificate.
-  verdict <- if (eta_used <= eta_dag) {
+  passes <- if (pilot == "conservative") ell >= certified_breakdown else
+    eta_used <= eta_dag
+  verdict <- if (passes) {
     if (pilot == "conservative") "CERTIFIED" else "POINT_PASS"
   } else "FLAGGED"
   implied_size <- .noncentral_size(eta_point, alpha)
 
   if (pilot == "conservative") {
     notes <- c(notes, sprintf(
-      "formal certificate (prop-certificate): the verdict uses U_n = |beta0_corr| + z_{1-gamma} se(beta0_corr), giving |eta|_ub = %.3f, with false-certification probability at most gamma = %.2g. Tolerances are the TRIPLE (alpha, delta, gamma) = (%.2g, %.2g, %.2g) and do not collapse (rem-gamma-delta): delta bounds the size distortion certified, gamma bounds the probability the statement is wrong. Implied size shown is at the point pilot.",
-      eta_upper, gamma, alpha, delta, gamma))
+      "formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = %.3f is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = %.3f. False certification is at most gamma_beta + gamma_lambda = %.3g + %.3g = %.3g, without requiring independence. Implied size shown is at the point pilot.",
+      certified_breakdown, ell, gamma, gamma_lambda, gamma + gamma_lambda))
+    if (is.null(reliability_lower))
+      notes <- c(notes, "CONDITIONAL RELIABILITY TREATMENT: no reliability_lower was supplied, so lambda_hat is treated as known/consistent and gamma_lambda = 0. A noisy finite-sample reliability estimate requires a lower confidence bound and its coverage-error budget.")
   } else if (pilot == "point") {
     notes <- c(notes, "POINT PASS, not a certificate (rem-plugin): the corrected pilot at its point estimate is descriptive. Under weak information eta_hat converges to a nondegenerate random multiple (|B|/|beta0|)|eta| of the target -- median close to it, but no concentration. Its sampling variability is a first-order feature of the regime, not a vanishing approximation error. For a size-controlled statement use pilot = \"conservative\".")
   } else {
-    notes <- c(notes, "ANTI-CONSERVATIVE naive pilot (attenuated beta*) \u2014 for comparison only; understates |eta| by the factor lambda (Paper B, Prop. prop-pilot(i))")
+    notes <- c(notes, "ANTI-CONSERVATIVE naive pilot (attenuated beta*) \u2014 for comparison only; understates |eta| by the factor lambda (Proposition prop-pilot(i))")
   }
   if (pilot != "naive")
-    notes <- c(notes, "corrected pilot beta*/lambda_hat is not a consistent point estimate under weak information; reported with its sampling band (Paper B, Cor. cor-slope)")
+    notes <- c(notes, "corrected pilot beta*/lambda_hat is not a consistent point estimate under weak information; reported with its sampling band (Corollary cor-slope)")
   if (eta_point > 1)
-    notes <- c(notes, "far from the threshold (|eta| > 1): the local quadratic approximation is uninformative here; the verdict uses exact inversion (Paper B, Remark rem-exact-cv)")
+    notes <- c(notes, "far from the threshold (|eta| > 1): the local quadratic approximation is uninformative here; the verdict uses exact inversion (Remark rem-exact-cv)")
   if (lambda < 1)
     notes <- c(notes, sprintf(
-      "power tax: local power slope attenuated by sqrt(lambda) = %.2f (Paper B, Prop. prop-power)",
+      "power tax: local power slope attenuated by sqrt(lambda) = %.2f (Proposition prop-power)",
       sqrt(lambda)))
   if (psi_hat != 1) {
     dir <- if (psi_hat > 1)
@@ -456,11 +522,17 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
     notes <- c(notes, "the CRVE here omits the conventional (n-1)/(n-K) small-sample factor, which converges to 1/(1-rho) rather than 1 and so OVER-corrects when rho is non-negligible (lem-crve). Default software applies it: reproducing psi_hat with such defaults will inflate it by roughly 1/(1-rho).")
   }
 
-  statistic <- list(lambda_hat = lambda, noise_ratio = (1 - lambda) / lambda,
+  statistic <- list(lambda_hat = lambda, reliability_lower = ell,
+                    noise_ratio = (1 - lambda) / lambda,
                     beta_star = beta_star, beta_corr = beta_corr,
                     se_beta_corr = se_corr, sigma = sigma, s_CR = s_CR,
                     t_star = t_star, t_CR = t_star / sqpsi,
-                    psi_hat = psi_hat, gamma = gamma, pilot = pilot,
+                    psi_hat = psi_hat,
+                    breakdown_certified = certified_breakdown,
+                    gamma = gamma, gamma_beta = gamma,
+                    gamma_lambda = gamma_lambda,
+                    false_certification_bound = gamma + gamma_lambda,
+                    pilot = pilot,
                     eta_quad_threshold = .eta_quad(alpha, delta))
   if (!is.null(rho_ar1)) statistic$rho_ar1 <- rho_ar1
   if (!is.null(cluster_diag)) statistic$cluster <- cluster_diag
@@ -474,7 +546,7 @@ eiv_adequacy_summary <- function(beta_star, sigma, tau_star2, n, d_K,
 
 #' Checkable conditions behind the cluster-robust layer
 #'
-#' Assumption ass-cluster and Lemma lem-nest of Paper B. All are computable from
+#' Assumption ass-cluster and Lemma lem-nest of the accompanying article. All are computable from
 #' the design alone, before any outcome is examined.
 #'
 #' Condition (iv) of ass-cluster -- projection compatibility -- is the one with
@@ -544,7 +616,7 @@ cluster_diagnostics <- function(xt, cluster, fe_levels, tau_star2) {
 
 #' Projection compatibility, evaluated directly
 #'
-#' Assumption ass-cluster(iv) of Paper B asks that
+#' Assumption ass-cluster(iv) of the accompanying article asks that
 #' \eqn{\sum_g \|M a^{(g)} - a^{(g)}\|^2 = o_p(\tau^{*2})}, where
 #' \eqn{a^{(g)}} is the residualized regressor restricted to cluster \eqn{g}.
 #' This function computes that ratio as it stands, for a two-way (unit and

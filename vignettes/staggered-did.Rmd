@@ -48,8 +48,11 @@ largest heterogeneity-to-noise ratio `c/sigma` the design tolerates.
 
 ## The inference layer
 
-With an outcome, `twfe_adequacy()` estimates the heterogeneity scale in the
-cohort-plus-event-time class and maps it to two distinct quantities:
+With an outcome, `twfe_adequacy()` estimates heterogeneity in a nested ladder:
+cohort, event time, additive cohort plus event time, and the saturated
+post-treatment group-time class. In a balanced panel the last class spans every
+treated-cell profile relevant to TWFE weighting, so `Gamma_gt = Gamma`. The
+function maps the estimated profile to two distinct quantities:
 
 - the **worst-case size envelope** maximizes the mean shift over that calibrated
   class. It says what the design can certify uniformly; it is an upper bound,
@@ -63,11 +66,14 @@ and reports the equivalent `q_hat` and `se_cr1`. Parametric AR(1), i.i.d., and
 a positive user-supplied `psi` remain explicit sensitivity routes. The sign of
 the cluster adjustment is never assumed.
 
-The heterogeneity pilot is covariance-aware. A fixed-design cluster bootstrap
-estimates the covariance matrix of the group-time effects, and the projected
-quadratic-form noise trace is removed before the class radius is formed. This
-matters because group-time comparisons share controls; subtracting only the
-average marginal variance generally removes the wrong amount of noise.
+The heterogeneity pilot is covariance-aware. The cluster-score covariance of
+the group-time effects supplies the projected quadratic-form noise trace,
+which is removed before the descriptive point radius is formed. Because that
+quadratic pilot is nonregular at zero heterogeneity, it does not determine the
+formal decision. Instead, cluster multipliers calibrate a one-sided confidence
+radius for the projected group-time vector before its norm is taken. HC2 is the
+primary bound and HC3 is reported as a leverage sensitivity check. This also
+respects covariance across group-time comparisons that share controls.
 
 ```{r}
 delta_g <- c(-0.6, 0, 0.6)                       # heterogeneous cohort effects
@@ -88,12 +94,17 @@ for a full heterogeneity-robust DiD estimator.
 The package includes the exact four-column analysis extract for the
 Callaway--Sant'Anna minimum-wage application, along with the castle-doctrine
 and divorce panels. The minimum-wage data contain 15,988 county-years from
-2,284 counties over seven years. The current point diagnostics are:
+2,284 counties over seven years. The current diagnostics are:
 
-- minimum wage: a 29.3% worst-case envelope and a 27.8% directional plug-in;
-- castle doctrine: a 5.0% envelope, hence a certificate at the 10% ceiling;
-- no-fault divorce: a 41.5% point envelope and a 37.1% directional plug-in,
-  with a wide bootstrap interval and a fixed-`T` warning (`G = 49`, `T = 27`).
+- minimum wage: an equally weighted treated-cell ATT of about -5.2%, a 31.6%
+  saturated-class point envelope, and a projected-norm lower endpoint above the
+  threshold, so uniform certification is withheld;
+- castle doctrine: a 5.1% saturated-class point envelope and an HC2 upper
+  endpoint below the threshold, hence formal certification at `gamma = 0.05`;
+  the slightly larger HC3 endpoint is a deliberately visible sensitivity;
+- no-fault divorce: a roughly 70% saturated-class point envelope and a wide
+  projected-norm interval crossing the threshold. The width is consistent with
+  the strained fixed-`T` approximation (`G = 49`, `T = 27`).
 
 The last result illustrates why the point envelope and its uncertainty should
 both be reported. The package never relabels a worst-case envelope as realized
@@ -104,7 +115,9 @@ data(minimum_wage)
 mw <- twfe_adequacy(minimum_wage$y, minimum_wage$uid,
                     minimum_wage$tid, minimum_wage$ft,
                     controls = "never", bootstrap = 999)
-c(envelope = mw$statistic$size_cmb,
+c(target_att = mw$statistic$att_target,
+  envelope = mw$statistic$size_gt,
+  K_lower = mw$statistic$K_lower_gt,
   directional = mw$statistic$size_directional,
   verdict = mw$verdict)
 

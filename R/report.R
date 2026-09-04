@@ -35,30 +35,46 @@
       lines <- c(lines, sprintf("Pilot: beta* = %.4g -> corrected beta0 = %.4g (se %.3g)",
                                 s$beta_star, s$beta_corr, s$se_beta_corr))
     if (has("eta_upper"))
-      lines <- c(lines, sprintf("Conservative |eta| (upper-bound pilot) = %.3f",
-                                s$eta_upper))
+      lines <- c(lines, sprintf(
+        "Certified breakdown = %.3f   reliability lower bound = %.3f   |eta| upper bound = %.3f",
+        s$breakdown_certified, s$reliability_lower, s$eta_upper))
   } else if (pathology == "twfe_heterogeneity" && has("Gamma")) {
     line <- sprintf("Design statistic Gamma = %.3f", s$Gamma)
     if (has("neg_share"))
       line <- paste0(line, sprintf("   negative-weight share = %.1f%%", 100 * s$neg_share))
     lines <- c(lines, line)
     if (has("Gamma_cmb"))
-      lines <- c(lines, sprintf("  restricted ladder: Gamma_c+e = %.3f | Gamma_evt = %.3f | Gamma_coh = %.3f",
-                                s$Gamma_cmb, s$Gamma_evt, s$Gamma_coh))
+      lines <- c(lines, sprintf(paste0(
+        "  restricted ladder: Gamma_gt = %.3f | Gamma_c+e = %.3f | ",
+        "Gamma_evt = %.3f | Gamma_coh = %.3f"),
+        if (has("Gamma_gt")) s$Gamma_gt else s$Gamma,
+        s$Gamma_cmb, s$Gamma_evt, s$Gamma_coh))
     if (has("Gamma_CR"))
-      lines <- c(lines, sprintf("Cluster normalization (%s; psi_hat = %.3f): Gamma_c+e,CR = %.3f | Gamma_CR = %.3f",
+      lines <- c(lines, sprintf("Cluster normalization (%s; psi_hat = %.3f): Gamma_gt,CR = %.3f | Gamma_c+e,CR = %.3f",
                                 if (has("normalization")) s$normalization else "legacy",
-                                s$psi_hat, s$Gamma_cmb_CR, s$Gamma_CR))
+                                s$psi_hat,
+                                if (has("Gamma_gt_CR")) s$Gamma_gt_CR else s$Gamma_CR,
+                                s$Gamma_cmb_CR))
     if (has("beta"))
       lines <- c(lines, sprintf("TWFE beta_hat = %.4g   sigma = %.4g", s$beta, s$sigma))
+    if (has("att_target") && is.finite(s$att_target))
+      lines <- c(lines, sprintf("Target-matched robust ATT = %.4g", s$att_target))
     if (has("pilot_cmb"))
-      lines <- c(lines, sprintf("Covariance-corrected pilots c_S/sigma: c+e = %.3g | evt = %.3g | coh = %.3g",
+      lines <- c(lines, sprintf("Trace-debiased point pilots c_S/sigma: gt = %.3g | c+e = %.3g | evt = %.3g | coh = %.3g",
+                                if (has("pilot_gt")) s$pilot_gt else NA_real_,
                                 s$pilot_cmb, s$pilot_evt, s$pilot_coh))
     if (has("size_cmb"))
-      lines <- c(lines, sprintf("Worst-case size envelope: combined-class = %.1f%% (headline) | cohort %.1f%% | event %.1f%%",
-                                100 * s$size_cmb, 100 * s$size_coh, 100 * s$size_evt))
+      lines <- c(lines, sprintf("Point worst-case envelopes: group-time = %.1f%% | c+e = %.1f%% | cohort %.1f%% | event %.1f%%",
+                                100 * if (has("size_gt")) s$size_gt else s$size_cmb,
+                                100 * s$size_cmb, 100 * s$size_coh,
+                                100 * s$size_evt))
+    if (has("K_lower_gt") && is.finite(s$K_lower_gt))
+      lines <- c(lines, sprintf(
+        "Boundary-robust group-time K interval (%.1f%%, HC2): [%.3f, %.3f]; HC3 [%.3f, %.3f]",
+        100 * (1 - s$gamma), s$K_lower_gt, s$K_upper_gt,
+        s$K_lower_gt_hc3, s$K_upper_gt_hc3))
     if (has("boot") && !is.null(s$boot))
-      lines <- c(lines, sprintf("  wild envelope (B=%d): median %.1f%%, 95%% [%.1f, %.1f]; psi in [%.2f, %.2f]",
+      lines <- c(lines, sprintf("  descriptive point-envelope bootstrap (B=%d): median %.1f%%, 95%% [%.1f, %.1f]; psi in [%.2f, %.2f]",
                                 s$boot$n, 100 * s$boot$envelope_med,
                                 100 * s$boot$envelope_lo, 100 * s$boot$envelope_hi,
                                 s$boot$psi_lo, s$boot$psi_hi))
@@ -163,11 +179,18 @@ print.AdequacyReport <- function(
                   "Worst-case size envelope for nominal %.0f%% test: %.1f%%\n"
                 else "Implied size of nominal %.0f%% test: %.1f%%\n",
                 100 * x$alpha, 100 * x$implied_size))
-  if (x$verdict == "POINT_PASS") {
+  if (x$verdict == "CERTIFIED" && !is.null(x$statistic$gamma)) {
+    cat(sprintf(paste0(
+      "VERDICT: FORMALLY CERTIFIED at (alpha, delta, gamma) = ",
+      "(%.2g, %.2g, %.2g)"), x$alpha, x$delta, x$statistic$gamma))
+  } else if (x$verdict == "POINT_PASS") {
     cat(sprintf("VERDICT: POINT PASS at delta=%.2g (descriptive \u2014 not a certificate)",
                 x$delta))
   } else if (x$verdict == "INCONCLUSIVE") {
     cat("VERDICT: INCONCLUSIVE")
+  } else if (x$verdict == "FLAGGED" && x$pathology == "twfe_heterogeneity") {
+    cat(sprintf("VERDICT: FLAGGED at delta=%.2g (uniform certificate withheld)",
+                x$delta))
   } else {
     cat(sprintf("VERDICT: %s at delta=%.2g", x$verdict, x$delta))
   }
