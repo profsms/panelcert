@@ -1,0 +1,50 @@
+# Stock-Yogo critical value for the residual treatment variance
+
+The default is Paper B's exact-normal inversion: \`tau2_crit = beta0^2
+c^4 (1-rho)/(sigma^2 eta_dagger^2) - c^2\`. Set \`method = "quadratic"\`
+for the closed-form companion \`beta0^2 c^4 (1-rho) z phi(z)/(sigma^2
+delta) - c^2\`. The quadratic boundary is mildly anti-conservative, so
+it is not the default. Two features trace to the corrected Hessian limit
+and are easy to get wrong: the leading term is LINEAR in \`(1-rho)\`,
+not quadratic, and the subtracted term is \`c^2\`, not \`c^2 (1-rho)\`.
+
+## Usage
+
+``` r
+tau2_crit(
+  rho,
+  c2,
+  beta0,
+  sigma,
+  alpha = 0.05,
+  delta = 0.05,
+  method = c("exact", "quadratic")
+)
+```
+
+## Arguments
+
+- rho:
+
+  fixed-effect saturation \`d_K/n\`, in \`\[0,1)\`.
+
+- c2:
+
+  the drift constant \`c^2\` in \`sigma_nu^2 = c^2/n\`.
+
+- beta0, sigma:
+
+  coefficient and residual scale.
+
+- alpha, delta:
+
+  level and size tolerance.
+
+- method:
+
+  \`"exact"\` (default) or \`"quadratic"\`.
+
+## Value
+
+The critical value; negative when the design is adequate at every
+\`tau^2\`.
