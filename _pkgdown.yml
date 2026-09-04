@@ -41,6 +41,7 @@ reference:
       - reliability_from_ratio
       - reliability_from_repeats
       - breakdown_reliability
+      - certified_breakdown_reliability
       - tau2_crit
       - eta_finite_n
       - cluster_diagnostics
@@ -61,4 +62,3 @@ reference:
       - fscore
       - grunfeld
       - minimum_wage
-
