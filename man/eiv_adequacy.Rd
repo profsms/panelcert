@@ -25,6 +25,7 @@ eiv_adequacy(object, ...)
   codelow = NULL,
   codehigh = NULL,
   reliability = NULL,
+  controls = NULL,
   alpha = 0.05,
   delta = 0.05,
   gamma = 0.05,
@@ -53,11 +54,16 @@ name of the time variable in the model frame}
 
 \item{sigma_nu}{per-observation (or scalar) measurement-error SD}
 
-\item{codelow}{lower posterior-interval bound (with \code{codehigh})}
+\item{codelow}{lower interval bound (with \code{codehigh})}
 
-\item{codehigh}{upper posterior-interval bound (with \code{codelow})}
+\item{codehigh}{upper interval bound (with \code{codelow})}
 
 \item{reliability}{the within reliability \eqn{\hat\lambda} in (0, 1]}
+
+\item{controls}{optional numeric nuisance-covariate vector or matrix. The
+target regressor, outcome, residual degrees of freedom, and measurement-
+error trace are all partialled with respect to these controls as well as
+the two fixed-effect sets.}
 
 \item{alpha}{nominal test level}
 
@@ -93,7 +99,8 @@ regression is reproduced via Frisch--Waugh from raw data (default method) or
 consumed directly from a fitted \pkg{fixest}, \pkg{plm}, or \code{lm} object
 --- the model is never re-specified. Supply exactly one noise input:
 \code{sigma_nu} (per-observation or scalar measurement-error SD),
-\code{codelow} + \code{codehigh} (V-Dem-style posterior interval bounds), or
+\code{codelow} + \code{codehigh} (when the interval half-width is calibrated
+as one error SD), or
 \code{reliability} (the within reliability \eqn{\hat\lambda} directly).
 }
 \details{

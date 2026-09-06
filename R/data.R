@@ -21,8 +21,10 @@
 #'   \item{v2xlg_legcon, v2xlg_legcon_sd}{legislative-constraints index and its posterior SD}
 #'   \item{v2x_jucon, v2x_jucon_sd}{judicial-constraints index and its posterior SD}
 #' }
-#' @source V-Dem dataset (measurement-model posterior SDs); Maddison Project
-#'   Database 2020.
+#' @source V-Dem dataset at commit
+#'   `f4dd26922e658442524dfd954bf14f7ebe622d5d` (measurement-model posterior
+#'   SDs); Maddison Project Database 2020. The raw V-Dem artifact is pinned by
+#'   SHA-256 in `inst/DATA_SOURCES.md`.
 #' @examples
 #' d <- vdem[stats::complete.cases(vdem$ly, vdem$v2x_polyarchy, vdem$v2x_polyarchy_sd), ]
 #' eiv_adequacy(d$ly, d$v2x_polyarchy, d$iso, d$year, sigma_nu = d$v2x_polyarchy_sd)

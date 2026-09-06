@@ -28,10 +28,5 @@ Useful links:
 \author{
 \strong{Maintainer}: Stanislaw M. S. Halkiewicz \email{stashal@o2.pl} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
 
-Authors:
-\itemize{
-  \item Stanislaw M. S. Halkiewicz \email{stashal@o2.pl} (\href{https://orcid.org/0009-0000-7344-7522}{ORCID})
-}
-
 }
 \keyword{internal}

@@ -10,6 +10,7 @@ projection_compatibility(
   unit,
   time,
   tau_star2 = sum(xt^2),
+  controls = NULL,
   tol = 1e-10,
   maxit = 10000L,
   max_cells = 5e+06
@@ -24,6 +25,9 @@ projection_compatibility(
 
 \item{tau_star2}{the within variation \code{sum(xt^2)}; defaults to
 \code{sum(xt^2)}.}
+
+\item{controls}{optional numeric nuisance-covariate vector or matrix. When
+supplied, the direct projection also removes their within-FE column space.}
 
 \item{tol, maxit}{convergence controls for the alternating projections.}
 

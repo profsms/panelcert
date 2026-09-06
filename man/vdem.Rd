@@ -16,8 +16,10 @@ A data frame with 8931 country-year rows and 9 variables:
 }
 }
 \source{
-V-Dem dataset (measurement-model posterior SDs); Maddison Project
-  Database 2020.
+V-Dem dataset at commit
+  `f4dd26922e658442524dfd954bf14f7ebe622d5d` (measurement-model posterior
+  SDs); Maddison Project Database 2020. The raw V-Dem artifact is pinned by
+  SHA-256 in `inst/DATA_SOURCES.md`.
 }
 \usage{
 vdem

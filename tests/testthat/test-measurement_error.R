@@ -69,13 +69,13 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   r <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "point")
   expect_equal(r$design$n, 8930)
   expect_equal(r$design$d_K, 221)
-  expect_equal(r$statistic$lambda_hat, 0.8984, tolerance = 1e-3 / 0.8984)
+  expect_equal(r$statistic$lambda_hat, 0.8937, tolerance = 1e-3 / 0.8937)
   expect_equal(r$statistic$beta_star, 0.06096, tolerance = 2e-3)
-  expect_equal(r$statistic$beta_corr, 0.06785, tolerance = 2e-3)
+  expect_equal(r$statistic$beta_corr, 0.06821, tolerance = 2e-3)
   expect_equal(r$statistic$sigma, 0.32956, tolerance = 2e-3)
   expect_equal(r$design$tau_star2, 127.826, tolerance = 2e-3)
-  expect_equal(r$eta, 0.23640, tolerance = 5e-3)
-  expect_equal(r$implied_size, 0.05643, tolerance = 5e-4 / 0.05643)
+  expect_equal(r$eta, 0.24884, tolerance = 5e-3)
+  expect_equal(r$implied_size, 0.05712, tolerance = 5e-4 / 0.05712)
   expect_equal(r$threshold, 0.652, tolerance = 5e-4 / 0.652)
   expect_equal(r$breakdown, 0.762, tolerance = 2e-3 / 0.762)  # fixed point (paper Table 3)
   # point verdict is exactly equivalent to lambda_hat >= breakdown
@@ -106,39 +106,39 @@ test_that("reference case 2a: V-Dem two-pole (spec 7.2)", {
   s <- vdem_spec(v, "v2xlg_legcon", "v2xlg_legcon_sd")
   r <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "point")
   expect_equal(r$design$n, 8529)
-  expect_equal(r$statistic$lambda_hat, 0.5472, tolerance = 1e-3 / 0.5472)
-  expect_equal(r$eta, 0.8853, tolerance = 5e-3)
-  expect_equal(r$implied_size, 0.1435, tolerance = 1e-3 / 0.1435)
+  expect_equal(r$statistic$lambda_hat, 0.4985, tolerance = 1e-3 / 0.4985)
+  expect_equal(r$eta, 1.0763, tolerance = 5e-3)
+  expect_equal(r$implied_size, 0.1896, tolerance = 1e-3 / 0.1896)
   expect_equal(r$breakdown, 0.621, tolerance = 2e-3 / 0.621)  # fixed point (paper Table 3)
   expect_identical(r$verdict, "FLAGGED")
   # the paper's middle case: flagged iid, point pass under country clustering
   rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
                       pilot = "point", cluster = "crve")
   expect_equal(rcr$statistic$psi_hat, 24.05, tolerance = 1e-2)
-  expect_equal(rcr$implied_size, 0.054, tolerance = 1e-3 / 0.054)
+  expect_equal(rcr$implied_size, 0.0555, tolerance = 1e-3 / 0.0555)
   expect_identical(rcr$verdict, "POINT_PASS")
 
   # THE naive-pilot danger (Prop. prop-pilot(i)) on real data
   rn <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "naive")
-  expect_equal(rn$eta, 0.8853 * 0.5472, tolerance = 1e-2)
+  expect_equal(rn$eta, 1.0763 * 0.4985, tolerance = 1e-2)
   expect_identical(rn$verdict, "POINT_PASS")  # the exact error the diagnostic prevents
   expect_true(any(grepl("ANTI-CONSERVATIVE", rn$notes)))
 
   s <- vdem_spec(v, "v2x_jucon", "v2x_jucon_sd")
   r <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd, pilot = "point")
   expect_equal(r$design$n, 8889)
-  expect_equal(r$statistic$lambda_hat, 0.4125, tolerance = 1e-3 / 0.4125)
-  expect_equal(r$eta, 12.10, tolerance = 1e-2)
+  expect_equal(r$statistic$lambda_hat, 0.3788, tolerance = 1e-3 / 0.3788)
+  expect_equal(r$eta, 13.93, tolerance = 1e-2)
   expect_equal(r$implied_size, 1, tolerance = 1e-6)
   expect_equal(r$breakdown, 0.929, tolerance = 2e-3 / 0.929)  # fixed point (paper Table 3)
   expect_identical(r$verdict, "FLAGGED")
   expect_true(any(grepl("quadratic", r$notes)))
-  # flag SURVIVES clustering: psi_hat = 25.2 but eta_CR = 2.4, size 67%
+  # flag SURVIVES clustering: psi_hat = 25.2 but eta_CR = 2.77, size 79%
   rcr <- eiv_adequacy(s$y, s$x, s$unit, s$time, sigma_nu = s$sd,
                       pilot = "point", cluster = "crve")
   expect_equal(rcr$statistic$psi_hat, 25.21, tolerance = 1e-2)
-  expect_equal(rcr$eta, 2.41, tolerance = 1e-2)
-  expect_equal(rcr$implied_size, 0.674, tolerance = 3e-3 / 0.674)
+  expect_equal(rcr$eta, 2.774, tolerance = 1e-2)
+  expect_equal(rcr$implied_size, 0.792, tolerance = 3e-3 / 0.792)
   expect_identical(rcr$verdict, "FLAGGED")
 })
 
@@ -203,6 +203,40 @@ test_that("repeated-report twins application", {
   expect_match(out, "n=147")
   expect_match(out, "d_K=4")
   expect_false(grepl("N=0", out))
+})
+
+test_that("controls enter regression df and exact noise trace", {
+  N <- 6L; TT <- 4L
+  unit <- rep(seq_len(N), each = TT)
+  time <- rep(seq_len(TT), times = N)
+  n <- length(unit); k <- seq_len(n)
+  z <- sin(0.37 * k) + 0.05 * unit
+  x <- cos(0.61 * k) + 0.4 * z + 0.1 * unit
+  y <- 1.2 * x - 0.7 * z + sin(1.13 * k)
+  sd <- 0.03 + 0.002 * k
+
+  K <- stats::model.matrix(~ factor(unit) + factor(time) + z)
+  Q <- qr.Q(qr(K))[, seq_len(ncol(K)), drop = FALSE]
+  M <- diag(n) - tcrossprod(Q)
+  xt <- drop(M %*% x); yt <- drop(M %*% y)
+  tau2 <- sum(xt^2)
+  beta <- sum(xt * yt) / tau2
+  dof <- n - ncol(K) - 1L
+  sigma <- sqrt(sum((yt - beta * xt)^2) / dof)
+  hK <- rowSums(Q^2)
+  lambda <- 1 - sum((1 - hK) * sd^2) / tau2
+
+  r <- eiv_adequacy(y, x, unit, time, controls = z,
+                    sigma_nu = sd, pilot = "point")
+  expect_equal(r$statistic$beta_star, beta, tolerance = 1e-11)
+  expect_equal(r$statistic$sigma, sigma, tolerance = 1e-11)
+  expect_equal(r$statistic$lambda_hat, lambda, tolerance = 1e-11)
+
+  s <- 0.04
+  rs <- eiv_adequacy(y, x, unit, time, controls = z,
+                     sigma_nu = s, pilot = "point")
+  lambda_s <- 1 - s^2 * (n - ncol(K)) / tau2
+  expect_equal(rs$statistic$lambda_hat, lambda_s, tolerance = 1e-11)
 })
 
 test_that("input validation and edge cases", {

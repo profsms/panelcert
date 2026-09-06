@@ -18,8 +18,9 @@
 
 #' Measurement-error SDs from published credible-interval bounds
 #'
-#' V-Dem convention: the interval brackets one posterior SD, so
-#' `sigma_nu = (codehigh - codelow)/2` (lead application in the accompanying article).
+#' Computes `sigma_nu = (codehigh - codelow)/2`. Use this helper only when the
+#' interval half-width is substantively calibrated as one measurement-error SD;
+#' do not apply it mechanically to highest-posterior-density bounds.
 #'
 #' @param codelow,codehigh interval bounds, one per observation
 #' @return numeric vector of per-observation measurement-error SDs
@@ -180,7 +181,8 @@ certified_breakdown_reliability <- function(beta_star, sigma, tau_star2,
 #' consumed directly from a fitted \pkg{fixest}, \pkg{plm}, or \code{lm} object
 #' --- the model is never re-specified. Supply exactly one noise input:
 #' \code{sigma_nu} (per-observation or scalar measurement-error SD),
-#' \code{codelow} + \code{codehigh} (V-Dem-style posterior interval bounds), or
+#' \code{codelow} + \code{codehigh} (when the interval half-width is calibrated
+#' as one error SD), or
 #' \code{reliability} (the within reliability \eqn{\hat\lambda} directly).
 #'
 #' Correct-by-default honesty machinery: \code{pilot = "conservative"}
@@ -200,9 +202,13 @@ certified_breakdown_reliability <- function(beta_star, sigma, tau_star2,
 #' @param time period identifiers (any type); for the \code{lm} method, the
 #'   name of the time variable in the model frame
 #' @param sigma_nu per-observation (or scalar) measurement-error SD
-#' @param codelow lower posterior-interval bound (with \code{codehigh})
-#' @param codehigh upper posterior-interval bound (with \code{codelow})
+#' @param codelow lower interval bound (with \code{codehigh})
+#' @param codehigh upper interval bound (with \code{codelow})
 #' @param reliability the within reliability \eqn{\hat\lambda} in (0, 1]
+#' @param controls optional numeric nuisance-covariate vector or matrix. The
+#'   target regressor, outcome, residual degrees of freedom, and measurement-
+#'   error trace are all partialled with respect to these controls as well as
+#'   the two fixed-effect sets.
 #' @param reliability_lower optional lower confidence bound for within
 #'   reliability. If omitted, the computed reliability is treated as
 #'   known/consistent, so certification is conditional on that treatment.
@@ -234,7 +240,8 @@ eiv_adequacy <- function(object, ...) UseMethod("eiv_adequacy")
 #' @export
 eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
                                  codelow = NULL, codehigh = NULL,
-                                 reliability = NULL, alpha = 0.05,
+                                 reliability = NULL, controls = NULL,
+                                 alpha = 0.05,
                                  delta = 0.05, gamma = 0.05,
                                  reliability_lower = NULL,
                                  gamma_lambda = 0,
@@ -251,11 +258,12 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
     stop("y, x, unit, time must have equal length")
   fd <- fe_dimension(uid, tid, N, T)
   d_K <- fd$d_K
-  dof <- n - d_K - 1
+  partial <- .partial_within_codes(x, uid, tid, N, T, controls = controls)
+  dof <- n - d_K - partial$rank - 1
   if (dof <= 0) stop("no residual degrees of freedom")
 
-  xt <- .twoway_demean_codes(x, uid, tid, N, T)
-  yt <- .twoway_demean_codes(y, uid, tid, N, T)
+  xt <- partial$xt
+  yt <- .partial_outcome_codes(y, uid, tid, N, T, partial$Q)
   tau_star2 <- sum(xt^2)
   if (tau_star2 <= 1e-12 * max(sum(as.numeric(x)^2), 1))
     stop("regressor has no within variation")
@@ -281,8 +289,13 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
       stop("sigma_nu must be scalar or have one value per observation")
     if (any(!is.finite(sigma_nu)) || any(sigma_nu < 0))
       stop("sigma_nu must be finite and non-negative")
-    s2 <- mean(sigma_nu^2)
-    a_hat <- s2 * (n - d_K)
+    if (length(sigma_nu) == 1L) {
+      a_hat <- sigma_nu^2 * (n - d_K - partial$rank)
+    } else {
+      p_nuisance <- .fe_leverage_codes(uid, tid, N, T)
+      if (partial$rank) p_nuisance <- p_nuisance + rowSums(partial$Q^2)
+      a_hat <- sum((1 - p_nuisance) * sigma_nu^2)
+    }
     lambda <- 1 - a_hat / tau_star2
   }
 
@@ -310,7 +323,8 @@ eiv_adequacy.default <- function(object, x, unit, time, sigma_nu = NULL,
     cdiag <- cluster_diagnostics(xt, uid, list(unit = uid, time = tid),
                                  tau_star2 = tau_star2)
     pcomp <- projection_compatibility(xt, uid, unit, time,
-                                      tau_star2 = tau_star2)
+                                      tau_star2 = tau_star2,
+                                      controls = controls)
     cdiag$projection_ratio <- pcomp$ratio
     cdiag$projection_cells <- pcomp$cells
     if (cdiag$ratio_ne > 0.20)
@@ -641,6 +655,8 @@ cluster_diagnostics <- function(xt, cluster, fe_levels, tau_star2) {
 #' @param unit,time raw fixed-effect identifiers, one per observation.
 #' @param tau_star2 the within variation \code{sum(xt^2)}; defaults to
 #'   \code{sum(xt^2)}.
+#' @param controls optional numeric nuisance-covariate vector or matrix. When
+#'   supplied, the direct projection also removes their within-FE column space.
 #' @param tol,maxit convergence controls for the alternating projections.
 #' @param max_cells refuse to allocate more than this many matrix cells.
 #' @return A list with `ratio` (the quantity above; `NA` if the guard tripped),
@@ -654,6 +670,7 @@ cluster_diagnostics <- function(xt, cluster, fe_levels, tau_star2) {
 #' @export
 projection_compatibility <- function(xt, cluster, unit, time,
                                      tau_star2 = sum(xt^2),
+                                     controls = NULL,
                                      tol = 1e-10, maxit = 10000L,
                                      max_cells = 5e6) {
   xt <- as.numeric(xt)
@@ -670,6 +687,8 @@ projection_compatibility <- function(xt, cluster, unit, time,
 
   cc <- .integer_codes(unit, time)
   uid <- cc$uid; tid <- cc$tid; N <- cc$N; T <- cc$T
+  partial <- .partial_within_codes(xt, uid, tid, N, T, controls = controls)
+  Q <- partial$Q
   ucnt <- pmax(tabulate(uid, N), 1L)
   tcnt <- pmax(tabulate(tid, T), 1L)
 
@@ -688,6 +707,7 @@ projection_compatibility <- function(xt, cluster, unit, time,
     if (delta < tol) { converged <- TRUE; break }
   }
   if (!converged) warning("two-way demeaning did not converge within maxit")
+  if (ncol(Q)) W <- W - Q %*% crossprod(Q, W)
 
   # W is M A, so A - W is P A and sum((A - W)^2) = sum_g ||M a^(g) - a^(g)||^2
   list(ratio = sum((A - W)^2) / tau_star2, G = G, n = n, cells = cells)

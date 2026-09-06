@@ -122,10 +122,9 @@ twfe_adequacy.plm <- function(object, first_treat, ...) {
 #' @export
 eiv_adequacy.lm <- function(object, x, unit, time, ...) {
   fr <- .frame_from_lm(object, x, unit, time)
-  if (!is.null(fr$controls))
-    stop("the eiv_adequacy lm adapter currently requires a single non-FE regressor")
   .check_adapter_beta(fr, "lm")
-  eiv_adequacy.default(fr$y, fr$x, fr$unit, fr$time, ...)
+  eiv_adequacy.default(fr$y, fr$x, fr$unit, fr$time,
+                       controls = fr$controls, ...)
 }
 
 #' @rdname leverage_report

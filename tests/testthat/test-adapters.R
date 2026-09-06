@@ -40,7 +40,13 @@ test_that("plm adapter reproduces the raw-data diagnostic", {
 
   m <- plm::plm(ly ~ v2x_polyarchy, data = d, index = c("iso", "year"),
                 model = "within", effect = "twoways")
-  r_model <- eiv_adequacy(m, sigma_nu = d$v2x_polyarchy_sd, pilot = "point")
+  # plm sorts its pdata.frame by panel index.  Per-observation pilot inputs to
+  # a fitted-model adapter must follow that estimation-sample order.
+  mi <- plm::index(m)
+  model_key <- paste(as.character(mi[[1]]), as.character(mi[[2]]), sep = "\r")
+  data_key <- paste(as.character(d$iso), as.character(d$year), sep = "\r")
+  sd_model <- d$v2x_polyarchy_sd[match(model_key, data_key)]
+  r_model <- eiv_adequacy(m, sigma_nu = sd_model, pilot = "point")
   r_raw <- eiv_adequacy(d$ly, d$v2x_polyarchy, d$iso, d$year,
                         sigma_nu = d$v2x_polyarchy_sd, pilot = "point")
   expect_equal(r_model$statistic$lambda_hat, r_raw$statistic$lambda_hat,
@@ -80,6 +86,21 @@ test_that("lm adapter reproduces the raw-data diagnostic", {
 
   expect_error(leverage_report(m, x = "nope", unit = "u", time = "t"),
                "not a variable")
+
+  # The measurement-error adapter preserves an observed nuisance control and
+  # uses its leverage in the observation-specific error trace.
+  df$z <- sin(0.37 * k) + 0.02 * as.integer(df$u)
+  df$y2 <- 1.1 * df$x - 0.6 * df$z + cos(0.71 * k)
+  sd <- 0.03 + 0.0002 * k
+  mc <- stats::lm(y2 ~ x + z + u + t, data = df)
+  e_model <- eiv_adequacy(mc, x = "x", unit = "u", time = "t",
+                          sigma_nu = sd, pilot = "point")
+  e_raw <- eiv_adequacy(df$y2, df$x, df$u, df$t, controls = df$z,
+                        sigma_nu = sd, pilot = "point")
+  expect_equal(e_model$statistic$beta_star, unname(stats::coef(mc)["x"]),
+               tolerance = 1e-8)
+  expect_equal(e_model$statistic$lambda_hat,
+               e_raw$statistic$lambda_hat, tolerance = 1e-10)
 })
 
 test_that("adapter guards: multiple regressors and mismatched first_treat", {

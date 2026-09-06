@@ -17,7 +17,7 @@ Install the current release from GitHub:
 
 ``` r
 install.packages("remotes")
-remotes::install_github("profsms/panelcert@v0.7.0")
+remotes::install_github("profsms/panelcert@v0.7.1")
 ```
 
 The r-universe build will be installable with
