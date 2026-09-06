@@ -15,6 +15,7 @@ projection_compatibility(
   unit,
   time,
   tau_star2 = sum(xt^2),
+  controls = NULL,
   tol = 1e-10,
   maxit = 10000L,
   max_cells = 5e+06
@@ -38,6 +39,11 @@ projection_compatibility(
 - tau_star2:
 
   the within variation `sum(xt^2)`; defaults to `sum(xt^2)`.
+
+- controls:
+
+  optional numeric nuisance-covariate vector or matrix. When supplied,
+  the direct projection also removes their within-FE column space.
 
 - tol, maxit:
 

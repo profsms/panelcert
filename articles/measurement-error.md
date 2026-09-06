@@ -7,7 +7,7 @@ within variation. *Breakdown Reliability for Saturated Fixed-Effect
 Inference* shows that the resulting size distortion of the naive t-test
 is governed by one number, the **within reliability**
 
-`lambda_hat = 1 - mean(sigma_nu^2) * (n - d_K) / tau_star2`,
+`lambda_hat = 1 - sum((1 - h_ii) * sigma_nu_i^2) / tau_star2`,
 
 the share of post-projection variation in the observed regressor that is
 signal. The feasible non-centrality is
@@ -20,11 +20,10 @@ is spurious (the size is even in `eta`) and must not be used.
 
 ## Noise inputs
 
-Three pathways, in decreasing order of directness:
+Four pathways, in decreasing order of directness:
 
-1.  **published measurement-model posteriors** (V-Dem-style):
-    `codelow`/`codehigh` interval bounds, converted by
-    [`reliability_from_interval()`](https://profsms.github.io/panelcert/reference/reliability_from_interval.md);
+1.  **published measurement-model posterior SDs** (V-Dem-style),
+    supplied directly as observation-specific `sigma_nu` values;
 2.  **repeated measurements on an identical projected sample**:
     `reliability_from_repeats(first, second)`, using the covariance
     estimator without an equal-error-variance restriction or
@@ -32,8 +31,12 @@ Three pathways, in decreasing order of directness:
     defensible;
 3.  **validation-study reliability ratios**:
     `reliability_from_ratio(r, within_sd)`;
-4.  **direct** `sigma_nu` or `reliability` values, including a
+4.  **other direct** `sigma_nu` or `reliability` values, including a
     sensitivity grid.
+    [`reliability_from_interval()`](https://profsms.github.io/panelcert/reference/reliability_from_interval.md)
+    is available only when an interval half-width is substantively
+    calibrated as one error SD; it must not be used to reinterpret
+    generic credible-interval endpoints as posterior SDs.
 
 Both repeated-report formulas require uncorrelated reporting errors. If
 reports share person-specific error, supply a correlated-error
@@ -69,8 +72,9 @@ c(default = r_default$verdict, naive = r_naive$verdict)
 
 The naive pilot understates `|eta|` by the factor `lambda` and can
 certify a specification whose true size is several times nominal — in
-the V-Dem application it certifies the legislative-constraints index
-whose exact size is 14%. The corrected default flags it.
+the V-Dem application it would pass the legislative-constraints index
+whose exact i.i.d.-reference size is 19%. The corrected default flags
+it.
 
 ``` r
 
@@ -109,19 +113,19 @@ p <- vdem[complete.cases(vdem$ly, vdem$v2x_polyarchy, vdem$v2x_polyarchy_sd), ]
 eiv_adequacy(p$ly, p$v2x_polyarchy, p$iso, p$year, sigma_nu = p$v2x_polyarchy_sd)
 #> Panel Adequacy Report — Measurement Error
 #> Design: n=8930, N=163, T=59, d_K=221, rho=0.0247
-#> Within reliability lambda_hat = 0.898   ((1-lambda)/lambda = 0.113)
-#> Pilot: beta* = 0.06096 -> corrected beta0 = 0.06785 (se 0.0324)
-#> Certified breakdown = 0.851   reliability lower bound = 0.898   |eta| upper bound = 0.422
-#> Non-centrality |eta| = 0.236   Threshold (delta=0.05) = 0.652
+#> Within reliability lambda_hat = 0.894   ((1-lambda)/lambda = 0.119)
+#> Pilot: beta* = 0.06096 -> corrected beta0 = 0.06821 (se 0.0326)
+#> Certified breakdown = 0.851   reliability lower bound = 0.894   |eta| upper bound = 0.445
+#> Non-centrality |eta| = 0.249   Threshold (delta=0.05) = 0.652
 #> Breakdown threshold = 0.762
-#> Implied size of nominal 5% test: 5.6%
+#> Implied size of nominal 5% test: 5.7%
 #> VERDICT: FORMALLY CERTIFIED at (alpha, delta, gamma) = (0.05, 0.05, 0.05)
-#> Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.898. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.
+#> Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.894. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.
 #> Note: CONDITIONAL RELIABILITY TREATMENT: no reliability_lower was supplied, so lambda_hat is treated as known/consistent and gamma_lambda = 0. A noisy finite-sample reliability estimate requires a lower confidence bound and its coverage-error budget.
 #> Note: corrected pilot beta*/lambda_hat is not a consistent point estimate under weak information; reported with its sampling band (Corollary cor-slope)
 #> Note: power tax: local power slope attenuated by sqrt(lambda) = 0.95 (Proposition prop-power)
 
-# Legislative constraints: flagged (lambda ~ 0.55, implied size ~14%)
+# Legislative constraints: flagged (lambda ~ 0.50, implied size ~19%)
 l <- vdem[complete.cases(vdem$ly, vdem$v2xlg_legcon, vdem$v2xlg_legcon_sd), ]
 eiv_adequacy(l$ly, l$v2xlg_legcon, l$iso, l$year,
              sigma_nu = l$v2xlg_legcon_sd)$verdict
@@ -189,7 +193,7 @@ eiv_adequacy(l$ly, l$v2xlg_legcon, l$iso, l$year,
 ```
 
 — while the judicial-constraints flag survives clustering (`psi_hat` ~
-25 still leaves an implied size of 67%). Pass `psi =` to supply your own
+25 still leaves an implied size of 79%). Pass `psi =` to supply your own
 factor (e.g. in
 [`eiv_adequacy_summary()`](https://profsms.github.io/panelcert/reference/eiv_adequacy_summary.md),
 where raw data is unavailable).

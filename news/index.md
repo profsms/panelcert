@@ -1,5 +1,24 @@
 # Changelog
 
+## panelcert 0.7.1
+
+- [`eiv_adequacy()`](https://profsms.github.io/panelcert/reference/eiv_adequacy.md)
+  now uses the exact leverage-weighted noise trace
+  `sum((1 - h_ii) * sigma_nu_i^2)` for observation-specific
+  measurement-error standard deviations. Both this trace and the
+  common-SD formula now use the full nuisance projection (fixed effects
+  plus supplied controls).
+- Added nuisance-control support to the raw-data method and the `lm`
+  adapter, including correct residual degrees of freedom and
+  control-aware projection- compatibility diagnostics.
+- Replaced the bundled V-Dem interval-half-width proxy with V-Dem’s
+  direct posterior-standard-deviation fields and refreshed the article
+  reproduction locks.
+  [`reliability_from_interval()`](https://profsms.github.io/panelcert/reference/reliability_from_interval.md)
+  now documents that its conversion is valid only when an interval
+  half-width is substantively calibrated as one error standard
+  deviation.
+
 ## panelcert 0.7.0
 
 - Added

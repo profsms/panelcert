@@ -6,8 +6,8 @@ The regression is reproduced via Frisch–Waugh from raw data (default
 method) or consumed directly from a fitted fixest, plm, or `lm` object —
 the model is never re-specified. Supply exactly one noise input:
 `sigma_nu` (per-observation or scalar measurement-error SD), `codelow` +
-`codehigh` (V-Dem-style posterior interval bounds), or `reliability`
-(the within reliability \\\hat\lambda\\ directly).
+`codehigh` (when the interval half-width is calibrated as one error SD),
+or `reliability` (the within reliability \\\hat\lambda\\ directly).
 
 ## Usage
 
@@ -33,6 +33,7 @@ eiv_adequacy(
   codelow = NULL,
   codehigh = NULL,
   reliability = NULL,
+  controls = NULL,
   alpha = 0.05,
   delta = 0.05,
   gamma = 0.05,
@@ -77,15 +78,22 @@ eiv_adequacy(
 
 - codelow:
 
-  lower posterior-interval bound (with `codehigh`)
+  lower interval bound (with `codehigh`)
 
 - codehigh:
 
-  upper posterior-interval bound (with `codelow`)
+  upper interval bound (with `codelow`)
 
 - reliability:
 
   the within reliability \\\hat\lambda\\ in (0, 1\]
+
+- controls:
+
+  optional numeric nuisance-covariate vector or matrix. The target
+  regressor, outcome, residual degrees of freedom, and measurement-
+  error trace are all partialled with respect to these controls as well
+  as the two fixed-effect sets.
 
 - alpha:
 

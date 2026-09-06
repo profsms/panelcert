@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -77,7 +77,7 @@ reliable within variation. <em>Breakdown Reliability for Saturated
 Fixed-Effect Inference</em> shows that the resulting size distortion of
 the naive t-test is governed by one number, the <strong>within
 reliability</strong></p>
-<p><code>lambda_hat = 1 - mean(sigma_nu^2) * (n - d_K) / tau_star2</code>,</p>
+<p><code>lambda_hat = 1 - sum((1 - h_ii) * sigma_nu_i^2) / tau_star2</code>,</p>
 <p>the share of post-projection variation in the observed regressor that
 is signal. The feasible non-centrality is
 <code>|eta| = (|beta0|/sigma) * (1 - lambda) * sqrt(tau_star2)</code>,
@@ -92,12 +92,12 @@ not be used.</p>
 <div class="section level2">
 <h2 id="noise-inputs">Noise inputs<a class="anchor" aria-label="anchor" href="#noise-inputs"></a>
 </h2>
-<p>Three pathways, in decreasing order of directness:</p>
+<p>Four pathways, in decreasing order of directness:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>published measurement-model posteriors</strong>
-(V-Dem-style): <code>codelow</code>/<code>codehigh</code> interval
-bounds, converted by <code><a href="../reference/reliability_from_interval.html">reliability_from_interval()</a></code>;</li>
+<strong>published measurement-model posterior SDs</strong>
+(V-Dem-style), supplied directly as observation-specific
+<code>sigma_nu</code> values;</li>
 <li>
 <strong>repeated measurements on an identical projected
 sample</strong>: <code>reliability_from_repeats(first, second)</code>,
@@ -108,8 +108,12 @@ additional restriction is defensible;</li>
 <strong>validation-study reliability ratios</strong>:
 <code>reliability_from_ratio(r, within_sd)</code>;</li>
 <li>
-<strong>direct</strong> <code>sigma_nu</code> or
-<code>reliability</code> values, including a sensitivity grid.</li>
+<strong>other direct</strong> <code>sigma_nu</code> or
+<code>reliability</code> values, including a sensitivity grid.
+<code><a href="../reference/reliability_from_interval.html">reliability_from_interval()</a></code> is available only when an
+interval half-width is substantively calibrated as one error SD; it must
+not be used to reinterpret generic credible-interval endpoints as
+posterior SDs.</li>
 </ol>
 <p>Both repeated-report formulas require uncorrelated reporting errors.
 If reports share person-specific error, supply a correlated-error
@@ -142,9 +146,9 @@ opt-in and labelled. On a design built to fail:</p>
 <span><span class="co">#&gt; "FLAGGED" "FLAGGED"</span></span></code></pre></div>
 <p>The naive pilot understates <code>|eta|</code> by the factor
 <code>lambda</code> and can certify a specification whose true size is
-several times nominal — in the V-Dem application it certifies the
-legislative-constraints index whose exact size is 14%. The corrected
-default flags it.</p>
+several times nominal — in the V-Dem application it would pass the
+legislative-constraints index whose exact i.i.d.-reference size is 19%.
+The corrected default flags it.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">r_default</span></span>
 <span><span class="co">#&gt; Panel Adequacy Report — Measurement Error</span></span>
@@ -179,19 +183,19 @@ article’s two-pole result runs directly off it — no download:</p>
 <span><span class="fu"><a href="../reference/eiv_adequacy.html">eiv_adequacy</a></span><span class="op">(</span><span class="va">p</span><span class="op">$</span><span class="va">ly</span>, <span class="va">p</span><span class="op">$</span><span class="va">v2x_polyarchy</span>, <span class="va">p</span><span class="op">$</span><span class="va">iso</span>, <span class="va">p</span><span class="op">$</span><span class="va">year</span>, sigma_nu <span class="op">=</span> <span class="va">p</span><span class="op">$</span><span class="va">v2x_polyarchy_sd</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Panel Adequacy Report — Measurement Error</span></span>
 <span><span class="co">#&gt; Design: n=8930, N=163, T=59, d_K=221, rho=0.0247</span></span>
-<span><span class="co">#&gt; Within reliability lambda_hat = 0.898   ((1-lambda)/lambda = 0.113)</span></span>
-<span><span class="co">#&gt; Pilot: beta* = 0.06096 -&gt; corrected beta0 = 0.06785 (se 0.0324)</span></span>
-<span><span class="co">#&gt; Certified breakdown = 0.851   reliability lower bound = 0.898   |eta| upper bound = 0.422</span></span>
-<span><span class="co">#&gt; Non-centrality |eta| = 0.236   Threshold (delta=0.05) = 0.652</span></span>
+<span><span class="co">#&gt; Within reliability lambda_hat = 0.894   ((1-lambda)/lambda = 0.119)</span></span>
+<span><span class="co">#&gt; Pilot: beta* = 0.06096 -&gt; corrected beta0 = 0.06821 (se 0.0326)</span></span>
+<span><span class="co">#&gt; Certified breakdown = 0.851   reliability lower bound = 0.894   |eta| upper bound = 0.445</span></span>
+<span><span class="co">#&gt; Non-centrality |eta| = 0.249   Threshold (delta=0.05) = 0.652</span></span>
 <span><span class="co">#&gt; Breakdown threshold = 0.762</span></span>
-<span><span class="co">#&gt; Implied size of nominal 5% test: 5.6%</span></span>
+<span><span class="co">#&gt; Implied size of nominal 5% test: 5.7%</span></span>
 <span><span class="co">#&gt; VERDICT: FORMALLY CERTIFIED at (alpha, delta, gamma) = (0.05, 0.05, 0.05)</span></span>
-<span><span class="co">#&gt; Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.898. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.</span></span>
+<span><span class="co">#&gt; Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.894. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.</span></span>
 <span><span class="co">#&gt; Note: CONDITIONAL RELIABILITY TREATMENT: no reliability_lower was supplied, so lambda_hat is treated as known/consistent and gamma_lambda = 0. A noisy finite-sample reliability estimate requires a lower confidence bound and its coverage-error budget.</span></span>
 <span><span class="co">#&gt; Note: corrected pilot beta*/lambda_hat is not a consistent point estimate under weak information; reported with its sampling band (Corollary cor-slope)</span></span>
 <span><span class="co">#&gt; Note: power tax: local power slope attenuated by sqrt(lambda) = 0.95 (Proposition prop-power)</span></span>
 <span></span>
-<span><span class="co"># Legislative constraints: flagged (lambda ~ 0.55, implied size ~14%)</span></span>
+<span><span class="co"># Legislative constraints: flagged (lambda ~ 0.50, implied size ~19%)</span></span>
 <span><span class="va">l</span> <span class="op">&lt;-</span> <span class="va">vdem</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/stats/complete.cases.html" class="external-link">complete.cases</a></span><span class="op">(</span><span class="va">vdem</span><span class="op">$</span><span class="va">ly</span>, <span class="va">vdem</span><span class="op">$</span><span class="va">v2xlg_legcon</span>, <span class="va">vdem</span><span class="op">$</span><span class="va">v2xlg_legcon_sd</span><span class="op">)</span>, <span class="op">]</span></span>
 <span><span class="fu"><a href="../reference/eiv_adequacy.html">eiv_adequacy</a></span><span class="op">(</span><span class="va">l</span><span class="op">$</span><span class="va">ly</span>, <span class="va">l</span><span class="op">$</span><span class="va">v2xlg_legcon</span>, <span class="va">l</span><span class="op">$</span><span class="va">iso</span>, <span class="va">l</span><span class="op">$</span><span class="va">year</span>,</span>
 <span>             sigma_nu <span class="op">=</span> <span class="va">l</span><span class="op">$</span><span class="va">v2xlg_legcon_sd</span><span class="op">)</span><span class="op">$</span><span class="va">verdict</span></span>
@@ -251,7 +255,7 @@ country-clustered ones an applied author would report —</p>
 <span>             pilot <span class="op">=</span> <span class="st">"point"</span>, cluster <span class="op">=</span> <span class="st">"crve"</span><span class="op">)</span><span class="op">$</span><span class="va">verdict</span></span>
 <span><span class="co">#&gt; [1] "POINT_PASS"</span></span></code></pre></div>
 <p>— while the judicial-constraints flag survives clustering
-(<code>psi_hat</code> ~ 25 still leaves an implied size of 67%). Pass
+(<code>psi_hat</code> ~ 25 still leaves an implied size of 79%). Pass
 <code>psi =</code> to supply your own factor (e.g. in
 <code><a href="../reference/eiv_adequacy_summary.html">eiv_adequacy_summary()</a></code>, where raw data is unavailable).</p>
 <p>Every application entry in the article is regression-locked this way;

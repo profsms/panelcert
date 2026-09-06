@@ -5,14 +5,16 @@ regression is reproduced via Frisch–Waugh from raw data (default method) or
 consumed directly from a fitted fixest, plm, or lm object
 — the model is never re-specified. Supply exactly one noise input:
 sigma_nu (per-observation or scalar measurement-error SD),
-codelow + codehigh (V-Dem-style posterior interval bounds), or
+codelow + codehigh (when the interval half-width is calibrated
+as one error SD), or
 reliability (the within reliability \(\hat\lambda\) directly)."><meta property="og:description" content="Certifies whether naive inference on an already-estimated FE regression is
 size-controlled under classical measurement error in the regressor. The
 regression is reproduced via Frisch–Waugh from raw data (default method) or
 consumed directly from a fitted fixest, plm, or lm object
 — the model is never re-specified. Supply exactly one noise input:
 sigma_nu (per-observation or scalar measurement-error SD),
-codelow + codehigh (V-Dem-style posterior interval bounds), or
+codelow + codehigh (when the interval half-width is calibrated
+as one error SD), or
 reliability (the within reliability \(\hat\lambda\) directly)."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -21,7 +23,7 @@ reliability (the within reliability \(\hat\lambda\) directly)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,7 +64,8 @@ regression is reproduced via Frisch–Waugh from raw data (default method) or
 consumed directly from a fitted <span class="pkg">fixest</span>, <span class="pkg">plm</span>, or <code>lm</code> object
 — the model is never re-specified. Supply exactly one noise input:
 <code>sigma_nu</code> (per-observation or scalar measurement-error SD),
-<code>codelow</code> + <code>codehigh</code> (V-Dem-style posterior interval bounds), or
+<code>codelow</code> + <code>codehigh</code> (when the interval half-width is calibrated
+as one error SD), or
 <code>reliability</code> (the within reliability \(\hat\lambda\) directly).</p>
     </div>
 
@@ -89,6 +92,7 @@ consumed directly from a fitted <span class="pkg">fixest</span>, <span class="pk
 <span>  codelow <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  codehigh <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  reliability <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  controls <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  delta <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  gamma <span class="op">=</span> <span class="fl">0.05</span>,</span>
@@ -134,15 +138,22 @@ name of the time variable in the model frame</p></dd>
 
 
 <dt id="arg-codelow">codelow<a class="anchor" aria-label="anchor" href="#arg-codelow"></a></dt>
-<dd><p>lower posterior-interval bound (with <code>codehigh</code>)</p></dd>
+<dd><p>lower interval bound (with <code>codehigh</code>)</p></dd>
 
 
 <dt id="arg-codehigh">codehigh<a class="anchor" aria-label="anchor" href="#arg-codehigh"></a></dt>
-<dd><p>upper posterior-interval bound (with <code>codelow</code>)</p></dd>
+<dd><p>upper interval bound (with <code>codelow</code>)</p></dd>
 
 
 <dt id="arg-reliability">reliability<a class="anchor" aria-label="anchor" href="#arg-reliability"></a></dt>
 <dd><p>the within reliability \(\hat\lambda\) in (0, 1]</p></dd>
+
+
+<dt id="arg-controls">controls<a class="anchor" aria-label="anchor" href="#arg-controls"></a></dt>
+<dd><p>optional numeric nuisance-covariate vector or matrix. The
+target regressor, outcome, residual degrees of freedom, and measurement-
+error trace are all partialled with respect to these controls as well as
+the two fixed-effect sets.</p></dd>
 
 
 <dt id="arg-alpha">alpha<a class="anchor" aria-label="anchor" href="#arg-alpha"></a></dt>

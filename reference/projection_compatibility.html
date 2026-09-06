@@ -15,7 +15,7 @@ time) fixed-effect design."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,6 +65,7 @@ time) fixed-effect design.</p>
 <span>  <span class="va">unit</span>,</span>
 <span>  <span class="va">time</span>,</span>
 <span>  tau_star2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">xt</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>,</span>
+<span>  controls <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  tol <span class="op">=</span> <span class="fl">1e-10</span>,</span>
 <span>  maxit <span class="op">=</span> <span class="fl">10000L</span>,</span>
 <span>  max_cells <span class="op">=</span> <span class="fl">5e+06</span></span>
@@ -90,6 +91,11 @@ time) fixed-effect design.</p>
 <dt id="arg-tau-star-">tau_star2<a class="anchor" aria-label="anchor" href="#arg-tau-star-"></a></dt>
 <dd><p>the within variation <code>sum(xt^2)</code>; defaults to
 <code>sum(xt^2)</code>.</p></dd>
+
+
+<dt id="arg-controls">controls<a class="anchor" aria-label="anchor" href="#arg-controls"></a></dt>
+<dd><p>optional numeric nuisance-covariate vector or matrix. When
+supplied, the direct projection also removes their within-FE column space.</p></dd>
 
 
 <dt id="arg-tol-maxit">tol, maxit<a class="anchor" aria-label="anchor" href="#arg-tol-maxit"></a></dt>

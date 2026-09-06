@@ -34,8 +34,3 @@ Useful links:
 
 **Maintainer**: Stanislaw M. S. Halkiewicz <stashal@o2.pl>
 ([ORCID](https://orcid.org/0009-0000-7344-7522))
-
-Authors:
-
-- Stanislaw M. S. Halkiewicz <stashal@o2.pl>
-  ([ORCID](https://orcid.org/0009-0000-7344-7522))

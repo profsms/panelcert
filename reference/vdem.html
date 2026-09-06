@@ -19,7 +19,7 @@ the paper reports – polyarchy certified, the constraint sub-indices flagged
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,8 +92,10 @@ the paper reports – polyarchy certified, the constraint sub-indices flagged
 </dl></div>
     <div class="section level2">
     <h2 id="source">Source<a class="anchor" aria-label="anchor" href="#source"></a></h2>
-    <p>V-Dem dataset (measurement-model posterior SDs); Maddison Project
-  Database 2020.</p>
+    <p>V-Dem dataset at commit
+  `f4dd26922e658442524dfd954bf14f7ebe622d5d` (measurement-model posterior
+  SDs); Maddison Project Database 2020. The raw V-Dem artifact is pinned by
+  SHA-256 in `inst/DATA_SOURCES.md`.</p>
     </div>
 
     <div class="section level2">
@@ -102,14 +104,14 @@ the paper reports – polyarchy certified, the constraint sub-indices flagged
 <span class="r-in"><span><span class="fu"><a href="eiv_adequacy.html">eiv_adequacy</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">ly</span>, <span class="va">d</span><span class="op">$</span><span class="va">v2x_polyarchy</span>, <span class="va">d</span><span class="op">$</span><span class="va">iso</span>, <span class="va">d</span><span class="op">$</span><span class="va">year</span>, sigma_nu <span class="op">=</span> <span class="va">d</span><span class="op">$</span><span class="va">v2x_polyarchy_sd</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Panel Adequacy Report — Measurement Error</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Design: n=8930, N=163, T=59, d_K=221, rho=0.0247</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Within reliability lambda_hat = 0.898   ((1-lambda)/lambda = 0.113)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Pilot: beta* = 0.06096 -&gt; corrected beta0 = 0.06785 (se 0.0324)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Certified breakdown = 0.851   reliability lower bound = 0.898   |eta| upper bound = 0.422</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Non-centrality |eta| = 0.236   Threshold (delta=0.05) = 0.652</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Within reliability lambda_hat = 0.894   ((1-lambda)/lambda = 0.119)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Pilot: beta* = 0.06096 -&gt; corrected beta0 = 0.06821 (se 0.0326)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Certified breakdown = 0.851   reliability lower bound = 0.894   |eta| upper bound = 0.445</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Non-centrality |eta| = 0.249   Threshold (delta=0.05) = 0.652</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Breakdown threshold = 0.762</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Implied size of nominal 5% test: 5.6%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Implied size of nominal 5% test: 5.7%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> VERDICT: FORMALLY CERTIFIED at (alpha, delta, gamma) = (0.05, 0.05, 0.05)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.898. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.894. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: CONDITIONAL RELIABILITY TREATMENT: no reliability_lower was supplied, so lambda_hat is treated as known/consistent and gamma_lambda = 0. A noisy finite-sample reliability estimate requires a lower confidence bound and its coverage-error budget.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: corrected pilot beta*/lambda_hat is not a consistent point estimate under weak information; reported with its sampling band (Corollary cor-slope)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: power tax: local power slope attenuated by sqrt(lambda) = 0.95 (Proposition prop-power)</span>

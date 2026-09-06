@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,13 @@
       <small>Source: <a href="https://github.com/profsms/panelcert/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.1" id="panelcert-071">panelcert 0.7.1<a class="anchor" aria-label="anchor" href="#panelcert-071"></a></h2>
+<ul><li>
+<code><a href="../reference/eiv_adequacy.html">eiv_adequacy()</a></code> now uses the exact leverage-weighted noise trace <code>sum((1 - h_ii) * sigma_nu_i^2)</code> for observation-specific measurement-error standard deviations. Both this trace and the common-SD formula now use the full nuisance projection (fixed effects plus supplied controls).</li>
+<li>Added nuisance-control support to the raw-data method and the <code>lm</code> adapter, including correct residual degrees of freedom and control-aware projection- compatibility diagnostics.</li>
+<li>Replaced the bundled V-Dem interval-half-width proxy with V-Dem’s direct posterior-standard-deviation fields and refreshed the article reproduction locks. <code><a href="../reference/reliability_from_interval.html">reliability_from_interval()</a></code> now documents that its conversion is valid only when an interval half-width is substantively calibrated as one error standard deviation.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.0" id="panelcert-070">panelcert 0.7.0<a class="anchor" aria-label="anchor" href="#panelcert-070"></a></h2>
 <ul><li>Added <code><a href="../reference/certified_breakdown_reliability.html">certified_breakdown_reliability()</a></code> and exposed the paper’s closed-form certified threshold in every measurement-error report.</li>

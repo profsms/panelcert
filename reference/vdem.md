@@ -44,8 +44,9 @@ A data frame with 8931 country-year rows and 9 variables:
 
 ## Source
 
-V-Dem dataset (measurement-model posterior SDs); Maddison Project
-Database 2020.
+V-Dem dataset at commit \`f4dd26922e658442524dfd954bf14f7ebe622d5d\`
+(measurement-model posterior SDs); Maddison Project Database 2020. The
+raw V-Dem artifact is pinned by SHA-256 in \`inst/DATA_SOURCES.md\`.
 
 ## Examples
 
@@ -54,14 +55,14 @@ d <- vdem[stats::complete.cases(vdem$ly, vdem$v2x_polyarchy, vdem$v2x_polyarchy_
 eiv_adequacy(d$ly, d$v2x_polyarchy, d$iso, d$year, sigma_nu = d$v2x_polyarchy_sd)
 #> Panel Adequacy Report — Measurement Error
 #> Design: n=8930, N=163, T=59, d_K=221, rho=0.0247
-#> Within reliability lambda_hat = 0.898   ((1-lambda)/lambda = 0.113)
-#> Pilot: beta* = 0.06096 -> corrected beta0 = 0.06785 (se 0.0324)
-#> Certified breakdown = 0.851   reliability lower bound = 0.898   |eta| upper bound = 0.422
-#> Non-centrality |eta| = 0.236   Threshold (delta=0.05) = 0.652
+#> Within reliability lambda_hat = 0.894   ((1-lambda)/lambda = 0.119)
+#> Pilot: beta* = 0.06096 -> corrected beta0 = 0.06821 (se 0.0326)
+#> Certified breakdown = 0.851   reliability lower bound = 0.894   |eta| upper bound = 0.445
+#> Non-centrality |eta| = 0.249   Threshold (delta=0.05) = 0.652
 #> Breakdown threshold = 0.762
-#> Implied size of nominal 5% test: 5.6%
+#> Implied size of nominal 5% test: 5.7%
 #> VERDICT: FORMALLY CERTIFIED at (alpha, delta, gamma) = (0.05, 0.05, 0.05)
-#> Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.898. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.
+#> Note: formal certificate (prop-certificate): certified breakdown lambda_dagger_gamma = 0.851 is obtained by replacing |t| with |t| + z_(1-gamma_beta); the comparison uses reliability lower bound ell = 0.894. False certification is at most gamma_beta + gamma_lambda = 0.05 + 0 = 0.05, without requiring independence. Implied size shown is at the point pilot.
 #> Note: CONDITIONAL RELIABILITY TREATMENT: no reliability_lower was supplied, so lambda_hat is treated as known/consistent and gamma_lambda = 0. A noisy finite-sample reliability estimate requires a lower confidence bound and its coverage-error budget.
 #> Note: corrected pilot beta*/lambda_hat is not a consistent point estimate under weak information; reported with its sampling band (Corollary cor-slope)
 #> Note: power tax: local power slope attenuated by sqrt(lambda) = 0.95 (Proposition prop-power)
