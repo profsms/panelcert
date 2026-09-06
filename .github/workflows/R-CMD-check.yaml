@@ -30,6 +30,16 @@ jobs:
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
+      - name: Ensure Fortran compiler path for macOS devel
+        if: runner.os == 'macOS' && matrix.config.r == 'devel'
+        run: |
+          if [ ! -x /opt/R/flang-23/bin/flang ]; then
+            compiler="$(command -v flang || command -v gfortran || true)"
+            if [ -n "$compiler" ]; then
+              sudo mkdir -p /opt/R/flang-23/bin
+              sudo ln -sf "$compiler" /opt/R/flang-23/bin/flang
+            fi
+          fi
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
