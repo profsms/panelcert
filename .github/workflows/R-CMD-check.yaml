@@ -30,16 +30,42 @@ jobs:
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
-      - name: Ensure Fortran compiler path for macOS devel
+      - name: Ensure Fortran compiler & runtime path for macOS devel
         if: runner.os == 'macOS' && matrix.config.r == 'devel'
         run: |
-          if [ ! -x /opt/R/flang-23/bin/flang ]; then
-            compiler="$(command -v flang || command -v gfortran || true)"
-            if [ -n "$compiler" ]; then
-              sudo mkdir -p /opt/R/flang-23/bin
-              sudo ln -sf "$compiler" /opt/R/flang-23/bin/flang
-            fi
+          set -euo pipefail
+
+          # pick a compiler binary if present
+          compiler="$(command -v flang || command -v gfortran || true)"
+          if [ -z "$compiler" ]; then
+            echo "No flang or gfortran found on PATH; consider installing gcc (brew install gcc)."
+            exit 0
           fi
+
+          # create expected bin path and symlink the binary there
+          sudo mkdir -p /opt/R/flang-23/bin
+          sudo ln -sf "$compiler" /opt/R/flang-23/bin/flang
+          echo "Linked /opt/R/flang-23/bin/flang -> $compiler"
+
+          # Attempt to find an available Fortran runtime library (dylib preferred, fall back to static .a)
+          lib_dylib="$(gfortran -print-file-name=libgfortran.dylib 2>/dev/null || true)"
+          lib_a="$(gfortran -print-file-name=libgfortran.a 2>/dev/null || true)"
+
+          sudo mkdir -p /opt/R/flang-23/lib
+          # if we have a dylib, symlink it to the runtime name flang expects
+          if [ -n "$lib_dylib" ] && [ -f "$lib_dylib" ]; then
+            sudo ln -sf "$lib_dylib" /opt/R/flang-23/lib/libflang_rt.runtime.dylib
+            echo "Linked libflang_rt.runtime.dylib -> $lib_dylib"
+          elif [ -n "$lib_a" ] && [ -f "$lib_a" ]; then
+            # static lib fallback
+            sudo ln -sf "$lib_a" /opt/R/flang-23/lib/libflang_rt.runtime.a
+            echo "Linked libflang_rt.runtime.a -> $lib_a"
+          else
+            echo "No libgfortran found via gfortran; you may need to 'brew install gcc' on the runner."
+          fi
+
+          # create any other directory the linker may search (harmless if unused)
+          sudo mkdir -p /opt/R/flang-23/lib/clang/23/lib/darwin
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
