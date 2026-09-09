@@ -24,6 +24,7 @@ Suggests: testthat (>= 3.0.0), fixest, plm, knitr, rmarkdown, covr, pkgdown
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
-URL: https://github.com/profsms/panelcert
+URL: https://profsms.github.io/panelcert,
+    https://github.com/profsms/panelcert
 BugReports: https://github.com/profsms/panelcert/issues
 RoxygenNote: 7.3.1
