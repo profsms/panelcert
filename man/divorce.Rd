@@ -3,7 +3,7 @@
 \docType{data}
 \name{divorce}
 \alias{divorce}
-\title{No-fault-divorce adoption panel (flagged application)}
+\title{No-fault-divorce adoption panel (rank-inconclusive application)}
 \format{
 A data frame with 1377 state-year rows and 4 variables:
 \describe{

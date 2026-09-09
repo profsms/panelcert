@@ -28,9 +28,10 @@ The remaining objects are the exact analysis extracts used by the papers:
 | FE--EIV V-Dem application | `vdem` | `eiv_vdem_panel.csv`, `vdem_gate1.csv` | V-Dem measurement-model output and Maddison Project Database 2020 |
 | FE--EIV repeated-report application | `twins` | `twins.csv` | `RbyExample::twins` 0.0.100; Ashenfelter--Krueger design |
 | Legacy measurement-error example | `psid` | `psid_wages_panel.csv` | Cornwell--Rupert PSID extract distributed by `plm` |
-| TWFE certified design | `castle` | `castle_panel.csv` | Cheng--Hoekstra castle-doctrine replication panel |
+| TWFE additive-class certificate | `castle` | `castle_panel.csv` | Cheng--Hoekstra castle-doctrine replication panel; saturated class is rank-inconclusive |
 | TWFE flagged design | `divorce` | `divorce_panel.csv` | Stevenson--Wolfers data distributed by `bacondecomp` |
 | TWFE headline design | `minimum_wage` | `minimum_wage_panel.csv` | Callaway--Sant'Anna public minimum-wage replication panel |
+| TWFE complementary large-panel application | `brazil` | `brazil_property_tax_panel.csv` | Christensen--Garfias property-tax data from the public Chiu--Lan--Liu--Xu reanalysis archive |
 
 The FE--EIV panel uses the direct posterior-standard-deviation variables from
 the V-Dem release at commit `f4dd26922e658442524dfd954bf14f7ebe622d5d`.
@@ -53,6 +54,15 @@ the shared Julia/R CSV has SHA-256
 `ac5a6e96ed4e9eead62e8c1d6c36c40a96e872b82d143477a31c15b49001a87b`.
 The package retains only unit, period, adoption period, and the log-employment
 outcome required to reproduce the article's unconditional specification.
+
+`brazil` is the four-column balanced 2004--2015 subset used for Paper C's
+property-tax reanalysis. Starting from `Christensen_Garfias_2021_JOP.rds`, the
+construction retains municipalities with a complete outcome/treatment path and
+excludes those treated in 2004. It contains 34,080 rows for 2,840
+municipalities. The source is the public Chiu--Lan--Liu--Xu Dataverse archive
+(doi:10.7910/DVN/9RJFZF); the shared Julia/R CSV has SHA-256
+`3d8966c620432ab527470babbda2283b40483bf609841a39b72a8db527e0a577`.
+`data-raw/make_brazil_panel.py` regenerates the extract from the source RDS.
 
 `twins` is built from an unmodified export of `RbyExample::twins` version
 0.0.100 (GPL >= 2), whose documentation attributes the study to Ashenfelter

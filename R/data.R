@@ -90,11 +90,13 @@
 #'              reliability = 0.65, pilot = "point")
 "psid"
 
-#' Castle-doctrine adoption panel (certified application)
+#' Castle-doctrine adoption panel (additive-class certificate)
 #'
 #' State--year panel for the Cheng--Hoekstra castle-doctrine design: a large
 #' never-treated reservoir, no negative weights, design statistic Gamma = 0.21.
-#' The certified application in the TWFE-heterogeneity audit.
+#' The homicide application certifies in the prespecified additive class. The
+#' saturated group-time class is structurally inconclusive because its
+#' projected score covariance has rank 18 rather than 19.
 #'
 #' @format A data frame with 550 state-year rows and 4 variables:
 #' \describe{
@@ -107,10 +109,11 @@
 #'   derived as in the TWFE-heterogeneity audit.
 #' @examples
 #' twfe_design(castle$uid, castle$tid, castle$ft)
-#' twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)
+#' twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+#'               heterogeneity_class = "additive")
 "castle"
 
-#' No-fault-divorce adoption panel (flagged application)
+#' No-fault-divorce adoption panel (rank-inconclusive application)
 #'
 #' State--year panel for the Stevenson--Wolfers no-fault-divorce design
 #' (Goodman-Bacon's pathology example): near-universal eventual adoption.
@@ -157,6 +160,32 @@
 #'               minimum_wage$ft, controls = "never", bootstrap = 19)
 #' }
 "minimum_wage"
+
+#' Brazilian property-tax panel (large-panel TWFE application)
+#'
+#' Balanced 2004--2015 municipal panel for the Christensen--Garfias property-
+#' tax specification. Municipalities treated in 2004 are excluded so every
+#' treated group-time effect has an in-sample untreated baseline. This is the
+#' balanced-subset reanalysis in Paper C, rather than the full published
+#' estimation sample.
+#'
+#' @format A data frame with 34,080 municipality-year rows and 4 variables:
+#' \describe{
+#'   \item{uid}{consecutive municipality id}
+#'   \item{tid}{period code, 1--12 for 2004--2015}
+#'   \item{ft}{first-treatment period; \code{NA} for never-treated municipalities}
+#'   \item{y}{log property-tax revenue (\code{logiptu})}
+#' }
+#' @source Christensen and Garfias (2021) replication data distributed in the
+#'   public Chiu, Lan, Liu, and Xu causal-panel reanalysis archive,
+#'   doi:10.7910/DVN/9RJFZF.
+#' @examples
+#' twfe_design(brazil$uid, brazil$tid, brazil$ft)
+#' \donttest{
+#' twfe_adequacy(brazil$y, brazil$uid, brazil$tid, brazil$ft,
+#'               bootstrap = 19)
+#' }
+"brazil"
 
 #' Piotroski F-Score / Visegrad firm panel (Paper A application)
 #'

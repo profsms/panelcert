@@ -13,8 +13,11 @@
 #   point     COVARIANCE-AWARE (eq-pilot): c_S^2 = n_w max{0, (1/N1)||Pi_S d||^2
 #             - (1/N1) tr(Pi_S~ A Omega A' Pi_S~)}, Omega = Cov(hat Delta_{g,t})
 #             from a fixed-design wild cluster bootstrap. This is descriptive.
-#   bounds    boundary-robust projected-vector norm bounds use an HC2 multiplier
-#             radius and the triangle inequality; HC3 is a sensitivity.
+#   bounds    the lower test uses an HC2 multiplier radius and reverse triangle
+#             inequality.  The upper certificate uses covariance-aware
+#             noncentral-chi-square inversion and requires full projected rank.
+#             HC3 is a sensitivity.  The full confidence-ball construction is
+#             retained as an optional, more general but less powerful fallback.
 #   direction eta_dir,S = sqrt(n_w) (w-u)'P_S Delta_hat / q_hat, a signed
 #             companion to (not a replacement for) the worst-case envelope.
 # Always-treated units (adopted before the sample) are DROPPED (setup g >= 2).
@@ -90,6 +93,66 @@
 }
 .proj <- function(B, x) B %*% (.pinv(crossprod(B)) %*% (t(B) %*% x))
 .hat  <- function(B) B %*% .pinv(crossprod(B)) %*% t(B)
+
+.centered_basis <- function(B, tol = 1e-10) {
+  Bc <- sweep(B, 2L, colMeans(B), "-")
+  s <- svd(Bc, nu = min(dim(Bc)), nv = 0L)
+  cutoff <- tol * max(c(s$d, 1))
+  keep <- s$d > cutoff
+  if (!any(keep)) return(matrix(0, nrow(B), 0L))
+  s$u[, keep, drop = FALSE]
+}
+
+.noncentrality_upper <- function(wald, rank, error_prob) {
+  if (stats::pchisq(wald, df = rank, ncp = 0) <= error_prob) return(0)
+  upper <- max(1, wald + rank)
+  while (stats::pchisq(wald, df = rank, ncp = upper) > error_prob) {
+    upper <- 2 * upper
+    if (!is.finite(upper)) stop("failed to bracket noncentrality upper bound")
+  }
+  stats::uniroot(
+    function(value) stats::pchisq(wald, df = rank, ncp = value) - error_prob,
+    c(0, upper), tol = 1e-12
+  )$root
+}
+
+.equivalence_upper <- function(delta_value, Q, A, score, Gamma, se,
+                               error_prob) {
+  expected_rank <- ncol(Q)
+  if (expected_rank == 0L || abs(Gamma) <= 1e-14) {
+    return(list(expected_rank = expected_rank, covariance_rank = 0L,
+                supported = TRUE, wald = 0, lambda_max = 0,
+                ncp_upper = 0, K_upper = 0))
+  }
+  N1 <- length(delta_value)
+  factor <- Gamma / se
+  effect <- as.numeric(crossprod(Q, delta_value)) / sqrt(N1)
+  score_coordinates <- crossprod(Q, A) %*% score / sqrt(N1)
+  covariance <- factor^2 * tcrossprod(score_coordinates)
+  covariance <- (covariance + t(covariance)) / 2
+  eig <- eigen(covariance, symmetric = TRUE)
+  largest <- if (length(eig$values)) max(eig$values) else 0
+  tolerance <- max(largest, .Machine$double.xmin) *
+    max(dim(covariance)) * .Machine$double.eps * 100
+  keep <- eig$values > tolerance
+  covariance_rank <- sum(keep)
+  answer <- list(expected_rank = expected_rank,
+                 covariance_rank = covariance_rank,
+                 supported = covariance_rank == expected_rank,
+                 wald = NA_real_, lambda_max = NA_real_,
+                 ncp_upper = NA_real_, K_upper = NA_real_)
+  if (covariance_rank == 0L) return(answer)
+  values <- eig$values[keep]
+  vectors <- eig$vectors[, keep, drop = FALSE]
+  coordinates <- as.numeric(crossprod(vectors, factor * effect))
+  answer$wald <- sum(coordinates^2 / values)
+  answer$lambda_max <- max(values)
+  if (!answer$supported) return(answer)
+  answer$ncp_upper <- .noncentrality_upper(answer$wald, covariance_rank,
+                                           error_prob)
+  answer$K_upper <- sqrt(answer$lambda_max * answer$ncp_upper)
+  answer
+}
 
 .restricted_gammas <- function(w, g_cell, t_cell, e_cell, N1) {
   d <- w - 1 / N1
@@ -268,6 +331,7 @@
   Omega <- score %*% t(score)
   list(Omega = Omega, sigma = sig, psi_ar1 = psi_ar1,
        psi_direct = psi_direct, gtm = gtm, keys = keys_nm,
+       score_hc2 = score_hc2, score_hc3 = score_hc3,
        error_hc2 = error_hc2, error_hc3 = error_hc3)
 }
 
@@ -338,8 +402,10 @@ twfe_gammas <- function(unit, time, first_treat) {
 #' \code{Gamma_{S,CR} = Gamma_S/sqrt(psi)}, covariance-aware pilots
 #' \code{c_S/sigma}, saturated group-time and restricted point envelopes, and
 #' the signed directional plug-in. A fixed-design cluster-multiplier radius
-#' yields boundary-robust lower and upper bounds on the population envelope;
-#' point-envelope bootstrap percentiles remain descriptive. Always-treated
+#' gives the regular one-sided lower bound. The upper certificate inverts the
+#' noncentral chi-square law of the projected Wald statistic and is issued only
+#' when the score covariance has full rank in the prespecified class.
+#' Point-envelope bootstrap percentiles remain descriptive. Always-treated
 #' units are dropped.
 #' @param object outcome vector
 #' @param unit,time,first_treat as in [twfe_design()]
@@ -350,9 +416,14 @@ twfe_gammas <- function(unit, time, first_treat) {
 #'   supplied it overrides \code{cluster}
 #' @param controls comparison group for group-time effects: not-yet-treated
 #'   (including never-treated) or never-treated only
+#' @param heterogeneity_class prespecified class used for the report verdict:
+#'   saturated group-time, additive cohort-plus-event-time, cohort, or event-time
 #' @param bootstrap number of wild-cluster draws (>0 enables the covariance
-#'   correction, descriptive point summaries, and projected-norm bounds)
-#' @param gamma error probability for the projected-norm confidence set
+#'   correction, descriptive point summaries, and one-sided procedures)
+#' @param gamma error probability for each reported one-sided procedure
+#' @param q_band optional relative half-width for the denominator band in the
+#'   more general full confidence-ball construction. It does not affect the
+#'   main decision-specific verdict.
 #' @param seed RNG seed for the wild bootstrap
 #' @param ... passed between methods
 #' @return an \code{AdequacyReport}
@@ -363,17 +434,23 @@ twfe_adequacy <- function(object, ...) UseMethod("twfe_adequacy")
 #' @export
 twfe_adequacy.default <- function(object, unit, time, first_treat,
                                   alpha = 0.05, delta = 0.05,
-                                  cluster = c("direct", "ar1", "iid"), psi = NULL,
-                                  controls = c("not_yet", "never"),
-                                  bootstrap = 999L, seed = 20260715L,
-                                  gamma = 0.05, ...) {
+                                   cluster = c("direct", "ar1", "iid"), psi = NULL,
+                                   controls = c("not_yet", "never"),
+                                   heterogeneity_class = c("group_time", "additive",
+                                                           "cohort", "event"),
+                                   bootstrap = 999L, seed = 20260715L,
+                                   gamma = 0.05, q_band = NULL, ...) {
   y0 <- object; cluster <- match.arg(cluster); controls <- match.arg(controls)
+  heterogeneity_class <- match.arg(heterogeneity_class)
   if (!is.null(psi) && (!is.numeric(psi) || length(psi) != 1L ||
                         !is.finite(psi) || psi <= 0))
     stop("psi must be a single positive finite number")
   if (!is.numeric(gamma) || length(gamma) != 1L || !is.finite(gamma) ||
       gamma <= 0 || gamma >= 0.5)
     stop("gamma must be a single number in (0, 0.5)")
+  if (!is.null(q_band) && (!is.numeric(q_band) || length(q_band) != 1L ||
+                           !is.finite(q_band) || q_band < 0 || q_band >= 1))
+    stop("q_band must be NULL or a single number in [0, 1)")
   sc <- .staggered_codes(unit, time, first_treat)
   if (length(y0) != length(sc$uid)) stop("y must have length n = ", length(sc$uid))
   dr <- .drop_always_treated(sc$uid, sc$tid, sc$ftc)
@@ -425,15 +502,15 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
     A <- matrix(0, ds$N1, length(keys_nm))
     cellkey <- paste(as.integer(g_cell), t_cell, sep = "_")
     for (k in seq_len(ds$N1)) { j <- match(cellkey[k], keys_nm); if (!is.na(j)) A[k, j] <- 1 }
-    Jm <- matrix(1 / ds$N1, ds$N1, ds$N1)
-    Pt <- list(coh = .hat(G$Bcoh) - Jm,
-               evt = .hat(G$Bevt) - Jm,
-               cmb = .hat(G$Bcmb) - Jm,
-               gt = .hat(G$Bgt) - Jm)
-    M <- A %*% wb$Omega %*% t(A)
-    traces <- list(coh = sum(Pt$coh * M) / ds$N1, evt = sum(Pt$evt * M) / ds$N1,
-                   cmb = sum(Pt$cmb * M) / ds$N1,
-                   gt = sum(Pt$gt * M) / ds$N1)
+    bnames <- c("coh", "evt", "cmb", "gt")
+    Blist <- list(coh = G$Bcoh, evt = G$Bevt, cmb = G$Bcmb, gt = G$Bgt)
+    Qlist <- lapply(Blist, .centered_basis)
+    # tr(Q' A Omega A' Q) is evaluated in group-time coordinates. This avoids
+    # materializing an N1-by-N1 treated-cell covariance matrix.
+    traces <- lapply(Qlist, function(Q) {
+      coordinates <- crossprod(Q, A)
+      sum((coordinates %*% wb$Omega) * coordinates) / ds$N1
+    })
     pilots <- .cov_pilots(look0, g_cell, t_cell, ds$N1, bases, traces, ds$n_w, sigma)
     size_pt <- list(coh = .noncentral_size(pilots$coh * CR$coh, alpha),
                     evt = .noncentral_size(pilots$evt * CR$evt, alpha),
@@ -459,42 +536,63 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
     }
     q <- function(v, p) stats::quantile(v[is.finite(v)], p, names = FALSE)
 
-    # Boundary-robust confidence bounds operate on the projected vector before
-    # taking its norm. The trace-debiased quadratic above remains a point
-    # calibration and does not determine the certificate.
+    # The trace-debiased quadratic above remains a descriptive point
+    # calibration.  The lower test applies reverse triangle inequality to the
+    # multiplier norm radius.  The upper certificate uses covariance-aware
+    # noncentral-chi-square inversion and therefore checks projected rank.
     delta0 <- .delta_cell(look0, g_cell, t_cell, ds$N1)
     if (all(is.finite(delta0)) && all(rowSums(A) == 1)) {
-      projected_scale <- function(B, delta_value) {
+      projected_scale <- function(Q, delta_value) {
         dc <- delta_value - mean(delta_value)
-        sqrt(ds$n_w / ds$N1) * sqrt(sum(.proj(B, dc)^2))
+        sqrt(ds$n_w / ds$N1) * sqrt(sum(crossprod(Q, dc)^2))
       }
-      error_norms <- function(B, E) {
-        cell_error <- A %*% E
-        cell_error <- sweep(cell_error, 2L, colMeans(cell_error), "-")
-        projected <- .proj(B, cell_error)
-        sqrt(ds$n_w / ds$N1) * sqrt(colSums(projected^2))
+      error_norms <- function(Q, E) {
+        projected_coordinates <- crossprod(Q, A) %*% E
+        sqrt(ds$n_w / ds$N1) * sqrt(colSums(projected_coordinates^2))
       }
-      bnames <- c("coh", "evt", "cmb", "gt")
-      Blist <- list(coh = G$Bcoh, evt = G$Bevt, cmb = G$Bcmb, gt = G$Bgt)
-      scales <- stats::setNames(vapply(Blist, projected_scale, numeric(1),
+      scales <- stats::setNames(vapply(Qlist, projected_scale, numeric(1),
                                       delta_value = delta0), bnames)
-      radii <- stats::setNames(vapply(Blist, function(B)
-        q(error_norms(B, wb$error_hc2), 1 - gamma), numeric(1)), bnames)
-      radii_hc3 <- stats::setNames(vapply(Blist, function(B)
-        q(error_norms(B, wb$error_hc3), 1 - gamma), numeric(1)), bnames)
+      radii <- stats::setNames(vapply(Qlist, function(Q)
+        q(error_norms(Q, wb$error_hc2), 1 - gamma), numeric(1)), bnames)
+      radii_hc3 <- stats::setNames(vapply(Qlist, function(Q)
+        q(error_norms(Q, wb$error_hc3), 1 - gamma), numeric(1)), bnames)
       gamma_values <- c(coh = G$coh, evt = G$evt, cmb = G$cmb, gt = G$gt)
       q_scale <- sigma * sqrt(psi_hat)
+      se_scale <- q_scale / sqrt(ds$n_w)
       lower <- gamma_values * pmax(0, scales - radii) / q_scale
-      upper <- gamma_values * (scales + radii) / q_scale
       lower_hc3 <- gamma_values * pmax(0, scales - radii_hc3) / q_scale
-      upper_hc3 <- gamma_values * (scales + radii_hc3) / q_scale
+      equivalence <- lapply(bnames, function(name)
+        .equivalence_upper(delta0, Qlist[[name]], A, wb$score_hc2,
+                           gamma_values[[name]], se_scale, gamma))
+      names(equivalence) <- bnames
+      equivalence_hc3 <- lapply(bnames, function(name)
+        .equivalence_upper(delta0, Qlist[[name]], A, wb$score_hc3,
+                           gamma_values[[name]], se_scale, gamma))
+      names(equivalence_hc3) <- bnames
+      upper <- stats::setNames(vapply(equivalence, `[[`, numeric(1), "K_upper"),
+                               bnames)
+      upper_hc3 <- stats::setNames(vapply(equivalence_hc3, `[[`, numeric(1),
+                                           "K_upper"), bnames)
+      ball_upper_raw <- gamma_values * (scales + radii) / q_scale
+      ball_upper_raw_hc3 <- gamma_values * (scales + radii_hc3) / q_scale
+      ball_lower <- if (is.null(q_band)) rep(NA_real_, length(lower)) else
+        (1 - q_band) * lower
+      ball_upper <- if (is.null(q_band)) rep(NA_real_, length(lower)) else
+        (1 + q_band) * ball_upper_raw
+      names(ball_lower) <- names(ball_upper) <- bnames
       formal <- list(confidence = 1 - gamma, scale = scales,
                      radius = radii, radius_hc3 = radii_hc3,
                      lower = lower, upper = upper,
-                     lower_hc3 = lower_hc3, upper_hc3 = upper_hc3)
+                     lower_hc3 = lower_hc3, upper_hc3 = upper_hc3,
+                     equivalence = equivalence,
+                     equivalence_hc3 = equivalence_hc3,
+                     ball_upper_raw = ball_upper_raw,
+                     ball_upper_raw_hc3 = ball_upper_raw_hc3,
+                     ball_lower = ball_lower, ball_upper = ball_upper,
+                     q_band = q_band)
     } else {
       notes <- c(notes, paste0(
-        "projected-norm certificate unavailable: the group-time estimator ",
+        "one-sided procedures unavailable: the group-time estimator ",
         "does not cover every treated cell"))
     }
 
@@ -525,7 +623,8 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
     notes <- c(notes, sprintf(paste0(
       "point pilot: covariance trace computed from the fitted Rademacher ",
       "score covariance; %d multiplier draws calibrate the %.1f%% HC2 ",
-      "projected-vector radius"), boot$n, 100 * (1 - gamma)))
+      "lower norm radius; the upper procedure uses projected-Wald ",
+      "noncentrality inversion"), boot$n, 100 * (1 - gamma)))
   } else {
     rawpil <- function(B) {
       delta <- .delta_cell(look0, g_cell, t_cell, ds$N1)
@@ -555,26 +654,52 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
     notes <- c(notes, sprintf("fixed-T, many-cluster approximation is strained (G = %d, T = %d)", N, T))
 
   eta_dag <- .eta_dagger(alpha, delta)
-  eta_gt <- pilots$gt * CR$gt
-  if (!is.null(formal) && is.finite(formal$lower["gt"]) &&
-      is.finite(formal$upper["gt"])) {
-    verdict <- if (formal$upper["gt"] <= eta_dag) "CERTIFIED" else
-      if (formal$lower["gt"] > eta_dag) "FLAGGED" else "INCONCLUSIVE"
-    if (verdict == "CERTIFIED")
+  class_keys <- c(group_time = "gt", additive = "cmb", cohort = "coh",
+                  event = "evt")
+  selected_key <- unname(class_keys[[heterogeneity_class]])
+  class_names <- c(coh = "cohort", evt = "event-time", cmb = "additive",
+                   gt = "saturated group-time")
+  decide <- function(key) {
+    if (is.null(formal) || !is.finite(formal$lower[[key]]))
+      return("INCONCLUSIVE")
+    if (formal$lower[[key]] > eta_dag) return("FLAGGED")
+    if (isTRUE(formal$equivalence[[key]]$supported) &&
+        is.finite(formal$upper[[key]]) && formal$upper[[key]] <= eta_dag)
+      return("CERTIFIED")
+    "INCONCLUSIVE"
+  }
+  class_verdicts <- stats::setNames(vapply(c("coh", "evt", "cmb", "gt"),
+                                            decide, character(1)),
+                                      c("coh", "evt", "cmb", "gt"))
+  verdict <- unname(class_verdicts[[selected_key]])
+  eta_selected <- pilots[[selected_key]] * CR[[selected_key]]
+  if (!is.null(formal)) {
+    eq_selected <- formal$equivalence[[selected_key]]
+    if (verdict == "CERTIFIED") {
       notes <- c(notes, sprintf(
-        "saturated group-time upper bound %.3f is below eta-dagger %.3f",
-        formal$upper["gt"], eta_dag))
-    else if (verdict == "FLAGGED")
+        "%s upper bound %.3f is below eta-dagger %.3f",
+        class_names[[selected_key]], formal$upper[[selected_key]], eta_dag))
+    } else if (verdict == "FLAGGED") {
       notes <- c(notes, sprintf(paste0(
-        "saturated group-time lower bound %.3f exceeds eta-dagger %.3f; ",
-        "uniform certification is withheld, not the published inference invalidated"),
-        formal$lower["gt"], eta_dag))
-    else
-      notes <- c(notes, sprintf(
-        "saturated group-time interval [%.3f, %.3f] crosses eta-dagger %.3f",
-        formal$lower["gt"], formal$upper["gt"], eta_dag))
-  } else {
-    verdict <- "INCONCLUSIVE"
+        "%s lower bound %.3f exceeds eta-dagger %.3f; uniform ",
+        "certification is withheld, not the published inference invalidated"),
+        class_names[[selected_key]], formal$lower[[selected_key]], eta_dag))
+    } else if (!isTRUE(eq_selected$supported)) {
+      notes <- c(notes, sprintf(paste0(
+        "%s upper certificate unavailable: projected score covariance rank ",
+        "%d/%d; result is inconclusive for this structural reason"),
+        class_names[[selected_key]], eq_selected$covariance_rank,
+        eq_selected$expected_rank))
+    } else {
+      notes <- c(notes, sprintf(paste0(
+        "%s one-sided lower %.3f and upper %.3f do not determine a verdict ",
+        "at eta-dagger %.3f"), class_names[[selected_key]],
+        formal$lower[[selected_key]], formal$upper[[selected_key]], eta_dag))
+    }
+    if (!is.null(q_band))
+      notes <- c(notes, sprintf(paste0(
+        "general confidence-ball fallback reported with denominator band ",
+        "q_band = %.4f; it does not determine the main verdict"), q_band))
   }
   design <- .design_summary_codes(uid, tid, N, T, xt = Dt)
   statistic <- list(Gamma = ds$Gamma, Gamma_coh = G$coh, Gamma_evt = G$evt,
@@ -597,13 +722,35 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
                     },
                     pilot_coh = pilots$coh, pilot_evt = pilots$evt,
                     pilot_cmb = pilots$cmb, pilot_gt = pilots$gt,
-                    size_coh = size_pt$coh, size_evt = size_pt$evt,
-                    size_cmb = size_pt$cmb, size_gt = size_pt$gt,
-                    K_lower_gt = if (is.null(formal)) NA_real_ else unname(formal$lower["gt"]),
-                    K_upper_gt = if (is.null(formal)) NA_real_ else unname(formal$upper["gt"]),
+                     size_coh = size_pt$coh, size_evt = size_pt$evt,
+                     size_cmb = size_pt$cmb, size_gt = size_pt$gt,
+                     selected_class = heterogeneity_class,
+                     verdict_coh = unname(class_verdicts["coh"]),
+                     verdict_evt = unname(class_verdicts["evt"]),
+                     verdict_cmb = unname(class_verdicts["cmb"]),
+                     verdict_gt = unname(class_verdicts["gt"]),
+                     K_lower_coh = if (is.null(formal)) NA_real_ else unname(formal$lower["coh"]),
+                     K_upper_coh = if (is.null(formal)) NA_real_ else unname(formal$upper["coh"]),
+                     K_lower_evt = if (is.null(formal)) NA_real_ else unname(formal$lower["evt"]),
+                     K_upper_evt = if (is.null(formal)) NA_real_ else unname(formal$upper["evt"]),
+                     K_lower_cmb = if (is.null(formal)) NA_real_ else unname(formal$lower["cmb"]),
+                     K_upper_cmb = if (is.null(formal)) NA_real_ else unname(formal$upper["cmb"]),
+                     K_lower_gt = if (is.null(formal)) NA_real_ else unname(formal$lower["gt"]),
+                     K_upper_gt = if (is.null(formal)) NA_real_ else unname(formal$upper["gt"]),
                     K_lower_gt_hc3 = if (is.null(formal)) NA_real_ else unname(formal$lower_hc3["gt"]),
-                    K_upper_gt_hc3 = if (is.null(formal)) NA_real_ else unname(formal$upper_hc3["gt"]),
-                    gamma = gamma,
+                     K_upper_gt_hc3 = if (is.null(formal)) NA_real_ else unname(formal$upper_hc3["gt"]),
+                     expected_rank_coh = if (is.null(formal)) NA_integer_ else formal$equivalence$coh$expected_rank,
+                     covariance_rank_coh = if (is.null(formal)) NA_integer_ else formal$equivalence$coh$covariance_rank,
+                     expected_rank_evt = if (is.null(formal)) NA_integer_ else formal$equivalence$evt$expected_rank,
+                     covariance_rank_evt = if (is.null(formal)) NA_integer_ else formal$equivalence$evt$covariance_rank,
+                     expected_rank_cmb = if (is.null(formal)) NA_integer_ else formal$equivalence$cmb$expected_rank,
+                     covariance_rank_cmb = if (is.null(formal)) NA_integer_ else formal$equivalence$cmb$covariance_rank,
+                     expected_rank_gt = if (is.null(formal)) NA_integer_ else formal$equivalence$gt$expected_rank,
+                     covariance_rank_gt = if (is.null(formal)) NA_integer_ else formal$equivalence$gt$covariance_rank,
+                     q_band = if (is.null(q_band)) NA_real_ else q_band,
+                     K_ball_lower_gt = if (is.null(formal)) NA_real_ else unname(formal$ball_lower["gt"]),
+                     K_ball_upper_gt = if (is.null(formal)) NA_real_ else unname(formal$ball_upper["gt"]),
+                     gamma = gamma,
                     eta_directional = directional$eta,
                     size_directional = .noncentral_size(directional$eta, alpha),
                     directional_alignment = directional$alignment,
@@ -611,9 +758,10 @@ twfe_adequacy.default <- function(object, unit, time, first_treat,
                     eta_real_cr = directional$eta,
                     size_realized = .noncentral_size(directional$eta, alpha),
                     controls = controls, boot = boot)
-  .new_AdequacyReport("twfe_heterogeneity", design, statistic, eta_gt,
-                      eta_dag, eta_dag / CR$gt, size_pt$gt, verdict,
-                      alpha, delta, notes)
+  .new_AdequacyReport("twfe_heterogeneity", design, statistic, eta_selected,
+                       eta_dag, eta_dag / CR[[selected_key]],
+                       size_pt[[selected_key]], verdict,
+                       alpha, delta, notes)
 }
 
 # ---- psi machinery (Paper C Def. def-psi) ------------------------------------

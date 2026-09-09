@@ -68,11 +68,30 @@
                                 100 * if (has("size_gt")) s$size_gt else s$size_cmb,
                                 100 * s$size_cmb, 100 * s$size_coh,
                                 100 * s$size_evt))
-    if (has("K_lower_gt") && is.finite(s$K_lower_gt))
+    if (has("K_lower_gt") && is.finite(s$K_lower_gt)) {
+      selected <- if (has("selected_class")) s$selected_class else "group_time"
       lines <- c(lines, sprintf(
-        "Boundary-robust group-time K interval (%.1f%%, HC2): [%.3f, %.3f]; HC3 [%.3f, %.3f]",
-        100 * (1 - s$gamma), s$K_lower_gt, s$K_upper_gt,
-        s$K_lower_gt_hc3, s$K_upper_gt_hc3))
+        "Selected heterogeneity class: %s (each bound is a separate one-sided %.1f%% statement)",
+        selected, 100 * (1 - s$gamma)))
+      specs <- list(coh = "cohort", evt = "event-time", cmb = "additive",
+                    gt = "group-time")
+      for (key in names(specs)) {
+        lo <- s[[paste0("K_lower_", key)]]
+        up <- s[[paste0("K_upper_", key)]]
+        verdict <- s[[paste0("verdict_", key)]]
+        if (is.finite(up)) {
+          lines <- c(lines, sprintf(
+            "  %s: lower %.3f; upper %.3f; %s",
+            specs[[key]], lo, up, verdict))
+        } else {
+          er <- s[[paste0("expected_rank_", key)]]
+          cr <- s[[paste0("covariance_rank_", key)]]
+          lines <- c(lines, sprintf(
+            "  %s: lower %.3f; upper unavailable (covariance rank %d/%d); %s",
+            specs[[key]], lo, cr, er, verdict))
+        }
+      }
+    }
     if (has("boot") && !is.null(s$boot))
       lines <- c(lines, sprintf("  descriptive point-envelope bootstrap (B=%d): median %.1f%%, 95%% [%.1f, %.1f]; psi in [%.2f, %.2f]",
                                 s$boot$n, 100 * s$boot$envelope_med,

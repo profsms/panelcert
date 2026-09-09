@@ -62,10 +62,11 @@ test_that("divorce design statistics (always-treated dropped; Table 4)", {
   expect_true(any(grepl("always-treated", r$notes)))
 })
 
-test_that("castle inference: projected-norm upper bound certifies", {
+test_that("castle inference: additive certifies and saturated is rank-inconclusive", {
   castle <- read_panel("castle_panel.csv")
   r <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
-                     bootstrap = 299L, seed = 20260715L)
+                     bootstrap = 299L, seed = 20260715L,
+                     q_band = 50^(-1 / 4))
   st <- r$statistic
   expect_equal(st$beta, 0.081812, tolerance = 1e-3)
   expect_equal(st$sigma, 0.186992, tolerance = 1e-3)
@@ -79,15 +80,26 @@ test_that("castle inference: projected-norm upper bound certifies", {
   expect_equal(st$pilot_gt, 0.74787382, tolerance = 1e-7)
   expect_equal(r$eta, 0.08610202, tolerance = 1e-7)
   expect_equal(st$size_gt, 0.05085, tolerance = 2e-3)
-  expect_lt(st$K_upper_gt, r$threshold)
-  expect_gt(st$K_upper_gt_hc3, r$threshold)
+  expect_true(is.na(st$K_upper_gt))
+  expect_equal(st$covariance_rank_gt, 18L)
+  expect_equal(st$expected_rank_gt, 19L)
+  expect_equal(st$K_upper_cmb, 0.236, tolerance = 2e-3)
+  expect_equal(st$covariance_rank_cmb, st$expected_rank_cmb)
+  expect_identical(st$verdict_cmb, "CERTIFIED")
+  expect_identical(st$verdict_gt, "INCONCLUSIVE")
+  expect_true(is.finite(st$K_ball_upper_gt))
   expect_equal(st$eta_directional, -0.0134423, tolerance = 1e-5)
   expect_equal(st$size_directional, 0.0500207, tolerance = 1e-5)
   expect_equal(st$directional_alignment, -0.164229, tolerance = 1e-5)
   expect_equal(st$sign_reversal_rms, 0.386972, tolerance = 1e-5)
   expect_equal(st$size_realized, st$size_directional, tolerance = 1e-12)
-  expect_identical(r$verdict, "CERTIFIED")
+  expect_identical(r$verdict, "INCONCLUSIVE")
   expect_true(!is.null(st$boot) && !is.null(st$boot$norm))
+})
+
+test_that("noncentral chi-square inversion matches a reference value", {
+  expect_equal(PD$.noncentrality_upper(5, 3L, 0.05),
+               12.381514467876382, tolerance = 2e-12)
 })
 
 test_that("divorce point envelope is large but norm bound is inconclusive", {
@@ -111,7 +123,9 @@ test_that("divorce point envelope is large but norm bound is inconclusive", {
   expect_equal(r$eta, 2.48546963, tolerance = 1e-7)
   expect_gt(st$size_gt, 0.65)
   expect_lt(st$K_lower_gt, r$threshold)
-  expect_gt(st$K_upper_gt, r$threshold)
+  expect_true(is.na(st$K_upper_gt))
+  expect_equal(st$covariance_rank_gt, 49L)
+  expect_equal(st$expected_rank_gt, 167L)
   expect_gt(st$size_coh, 0.10); expect_gt(st$size_evt, 0.10)
   expect_gte(st$size_cmb, st$size_coh - 1e-9)               # nesting
   expect_identical(r$verdict, "INCONCLUSIVE")
@@ -119,7 +133,7 @@ test_that("divorce point envelope is large but norm bound is inconclusive", {
   expect_true(any(grepl("fixed-T", r$notes)))
 })
 
-test_that("minimum-wage headline reproduces the JAE point diagnostics", {
+test_that("minimum-wage headline reproduces the current point diagnostics", {
   d <- get_dataset("minimum_wage")
   r <- twfe_adequacy(d$y, d$uid, d$tid, d$ft, controls = "never",
                      bootstrap = 19L, seed = 20260828L)
@@ -141,6 +155,21 @@ test_that("minimum-wage headline reproduces the JAE point diagnostics", {
   expect_equal(st$directional_alignment, 0.92476056, tolerance = 1e-7)
   expect_equal(st$sign_reversal_rms, 0.13576699, tolerance = 1e-7)
   expect_identical(r$verdict, "FLAGGED")
+})
+
+test_that("Brazil large-panel path stays compressed and flags every class", {
+  d <- get_dataset("brazil")
+  r <- twfe_adequacy(d$y, d$uid, d$tid, d$ft,
+                     bootstrap = 19L, seed = 20260907L)
+  st <- r$statistic
+  expect_equal(st$beta, 0.05934601, tolerance = 1e-7)
+  expect_equal(st$Gamma, 1.13807909, tolerance = 1e-7)
+  expect_equal(st$Gamma_coh, 0.46277016, tolerance = 1e-7)
+  expect_equal(st$neg_share, 0.17336022, tolerance = 1e-7)
+  expect_gt(st$K_lower_coh, r$threshold)
+  expect_identical(c(st$verdict_coh, st$verdict_evt,
+                     st$verdict_cmb, st$verdict_gt),
+                   rep("FLAGGED", 4L))
 })
 
 test_that("exchangeable psi identity (Thm thm-cluster(a))", {
@@ -166,12 +195,15 @@ test_that("validation and rendering", {
 
   castle <- read_panel("castle_panel.csv")
   out <- paste(utils::capture.output(
-    print(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft, bootstrap = 99L))),
+    print(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+                        heterogeneity_class = "additive", bootstrap = 99L))),
     collapse = "\n")
   expect_match(out, "TWFE Heterogeneity")
   expect_match(out, "restricted ladder")
   expect_match(out, "Point worst-case envelopes")
-  expect_match(out, "Boundary-robust group-time K interval")
+  expect_match(out, "Selected heterogeneity class: additive")
+  expect_true(grepl("upper unavailable (covariance rank 18/19)", out,
+                    fixed = TRUE))
   expect_match(out, "Directional plug-in")
   expect_false(grepl("Realized-profile", out, fixed = TRUE))
   expect_match(out, "VERDICT: FORMALLY CERTIFIED")
@@ -183,7 +215,11 @@ test_that("validation and rendering", {
   expect_error(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
                              controls = "bad"), "arg")
   expect_error(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+                             heterogeneity_class = "bad"), "arg")
+  expect_error(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
                              psi = -1), "positive")
   expect_error(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
                              gamma = 0.6), "gamma")
+  expect_error(twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+                             q_band = 1), "q_band")
 })

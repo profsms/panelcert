@@ -3,7 +3,7 @@
 \docType{data}
 \name{castle}
 \alias{castle}
-\title{Castle-doctrine adoption panel (certified application)}
+\title{Castle-doctrine adoption panel (additive-class certificate)}
 \format{
 A data frame with 550 state-year rows and 4 variables:
 \describe{
@@ -23,10 +23,13 @@ castle
 \description{
 State--year panel for the Cheng--Hoekstra castle-doctrine design: a large
 never-treated reservoir, no negative weights, design statistic Gamma = 0.21.
-The certified application in the TWFE-heterogeneity audit.
+The homicide application certifies in the prespecified additive class. The
+saturated group-time class is structurally inconclusive because its
+projected score covariance has rank 18 rather than 19.
 }
 \examples{
 twfe_design(castle$uid, castle$tid, castle$ft)
-twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)
+twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+              heterogeneity_class = "additive")
 }
 \keyword{datasets}

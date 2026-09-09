@@ -1,7 +1,7 @@
 Package: panelcert
 Type: Package
 Title: Inference-Adequacy Diagnostics for Panel-Data Designs
-Version: 0.7.1
+Version: 0.8.0
 Authors@R: person("Stanislaw M. S.", "Halkiewicz", email = "stashal@o2.pl",
     role = c("aut", "cre"), comment = c(ORCID = "0009-0000-7344-7522"))
 Maintainer: Stanislaw M. S. Halkiewicz <stashal@o2.pl>
@@ -12,8 +12,9 @@ Description: Implements exact nuisance-annihilating contrast inference for
     heterogeneity. Reports design and realized-score concentration, capture,
     exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal
     measurement-error thresholds, and TWFE design exposure, direct
-    cluster-score normalization, saturated group-time envelopes,
-    boundary-robust projected-norm certificates, and directional diagnostics.
+    cluster-score normalization, saturated group-time envelopes, regular
+    multiplier lower tests, covariance-aware projected-Wald upper certificates,
+    class-specific verdicts, and directional diagnostics.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

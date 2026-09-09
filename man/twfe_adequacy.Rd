@@ -23,9 +23,11 @@ twfe_adequacy(object, ...)
   cluster = c("direct", "ar1", "iid"),
   psi = NULL,
   controls = c("not_yet", "never"),
+  heterogeneity_class = c("group_time", "additive", "cohort", "event"),
   bootstrap = 999L,
   seed = 20260715L,
   gamma = 0.05,
+  q_band = NULL,
   ...
 )
 }
@@ -47,12 +49,19 @@ supplied it overrides \code{cluster}}
 \item{controls}{comparison group for group-time effects: not-yet-treated
 (including never-treated) or never-treated only}
 
+\item{heterogeneity_class}{prespecified class used for the report verdict:
+saturated group-time, additive cohort-plus-event-time, cohort, or event-time}
+
 \item{bootstrap}{number of wild-cluster draws (>0 enables the covariance
-correction, descriptive point summaries, and projected-norm bounds)}
+correction, descriptive point summaries, and one-sided procedures)}
 
 \item{seed}{RNG seed for the wild bootstrap}
 
-\item{gamma}{error probability for the projected-norm confidence set}
+\item{gamma}{error probability for each reported one-sided procedure}
+
+\item{q_band}{optional relative half-width for the denominator band in the
+more general full confidence-ball construction. It does not affect the
+main decision-specific verdict.}
 }
 \value{
 an \code{AdequacyReport}
@@ -62,7 +71,9 @@ Restricted design-statistic ladder, direct CR1 rescaling
 \code{Gamma_{S,CR} = Gamma_S/sqrt(psi)}, covariance-aware pilots
 \code{c_S/sigma}, saturated group-time and restricted point envelopes, and
 the signed directional plug-in. A fixed-design cluster-multiplier radius
-yields boundary-robust lower and upper bounds on the population envelope;
-point-envelope bootstrap percentiles remain descriptive. Always-treated
+gives the regular one-sided lower bound. The upper certificate inverts the
+noncentral chi-square law of the projected Wald statistic and is issued only
+when the score covariance has full rank in the prespecified class.
+Point-envelope bootstrap percentiles remain descriptive. Always-treated
 units are dropped.
 }

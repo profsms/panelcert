@@ -10,6 +10,8 @@ castle  <- utils::read.csv("data-raw/castle_panel.csv",    stringsAsFactors = FA
 divorce <- utils::read.csv("data-raw/divorce_panel.csv",   stringsAsFactors = FALSE)
 minimum_wage <- utils::read.csv("data-raw/minimum_wage_panel.csv",
                                 stringsAsFactors = FALSE)
+brazil <- utils::read.csv("data-raw/brazil_property_tax_panel.csv",
+                          stringsAsFactors = FALSE)
 fscore  <- utils::read.csv("data-raw/f_score_panel.csv",   stringsAsFactors = FALSE)
 
 if (!dir.exists("data")) dir.create("data")
@@ -19,6 +21,7 @@ save(twins,   file = "data/twins.rda",   compress = "xz")
 save(castle,  file = "data/castle.rda",  compress = "xz")
 save(divorce, file = "data/divorce.rda", compress = "xz")
 save(minimum_wage, file = "data/minimum_wage.rda", compress = "xz")
+save(brazil, file = "data/brazil.rda", compress = "xz")
 save(fscore,  file = "data/fscore.rda",  compress = "xz")
 
 message("built: ", paste(list.files("data"), collapse = ", "))
