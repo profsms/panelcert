@@ -60,7 +60,11 @@ twfe_adequacy(minimum_wage$y, minimum_wage$uid, minimum_wage$tid,
 #> Target-matched robust ATT = -0.05158
 #> Trace-debiased point pilots c_S/sigma: gt = 6.46 | c+e = 6.47 | evt = 6.62 | coh = 4.48
 #> Point worst-case envelopes: group-time = 31.6% | c+e = 29.3% | cohort 9.7% | event 29.2%
-#> Boundary-robust group-time K interval (95.0%, HC2): [0.855, 2.254]; HC3 [0.854, 2.256]
+#> Selected heterogeneity class: group_time (each bound is a separate one-sided 95.0% statement)
+#>   cohort: lower 0.276; upper 1.110; INCONCLUSIVE
+#>   event-time: lower 0.963; upper 1.994; FLAGGED
+#>   additive: lower 0.825; upper 3.622; FLAGGED
+#>   group-time: lower 0.855; upper 3.961; FLAGGED
 #>   descriptive point-envelope bootstrap (B=19): median 32.3%, 95% [22.3, 47.4]; psi in [1.36, 1.40]
 #> Directional plug-in: eta = +1.370 (alignment +0.925), size 27.8%
 #>   wild directional size: median 23.1%, 95% [12.5, 38.7]
@@ -69,7 +73,7 @@ twfe_adequacy(minimum_wage$y, minimum_wage$uid, minimum_wage$tid,
 #> Breakdown threshold = 2.847
 #> Worst-case size envelope for nominal 5% test: 31.6%
 #> VERDICT: FLAGGED at delta=0.05 (uniform certificate withheld)
-#> Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 19 multiplier draws calibrate the 95.0% HC2 projected-vector radius
+#> Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 19 multiplier draws calibrate the 95.0% HC2 lower norm radius; the upper procedure uses projected-Wald noncentrality inversion
 #> Note: normalization = direct: psi_hat = 1.385; direct CR1 psi = 1.385; AR(1) psi = 1.091 (rho = 0.266)
 #> Note: saturated group-time lower bound 0.855 exceeds eta-dagger 0.652; uniform certification is withheld, not the published inference invalidated
 # }

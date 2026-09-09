@@ -71,11 +71,23 @@ The heterogeneity pilot is covariance-aware. The cluster-score
 covariance of the group-time effects supplies the projected
 quadratic-form noise trace, which is removed before the descriptive
 point radius is formed. Because that quadratic pilot is nonregular at
-zero heterogeneity, it does not determine the formal decision. Instead,
-cluster multipliers calibrate a one-sided confidence radius for the
-projected group-time vector before its norm is taken. HC2 is the primary
-bound and HC3 is reported as a leverage sensitivity check. This also
-respects covariance across group-time comparisons that share controls.
+zero heterogeneity, it does not determine the formal decision. The
+regular lower test applies the reverse triangle inequality to an HC2
+cluster-multiplier radius. The upper certificate instead inverts the
+noncentral chi-square law of the projected Wald statistic. It is
+available only when the score covariance spans the full prespecified
+heterogeneity class; a rank failure produces `INCONCLUSIVE`, rather than
+an artificial upper bound. HC3 is reported as a leverage sensitivity
+check.
+
+Choose the decision class with `heterogeneity_class = "group_time"`,
+`"additive"`, `"cohort"`, or `"event"` before inspecting the outcome.
+The reported lower and upper bounds are separate one-sided statements,
+since only one is used for any verdict. If several classes or outcomes
+are screened as a family, divide `gamma` by the number of planned tests.
+The optional `q_band` argument reports the more general full
+confidence-ball construction with a relative denominator band; that
+construction is less powerful and does not change the main verdict.
 
 ``` r
 
@@ -100,8 +112,8 @@ twfe_adequacy(y, unit, time, ft_stag)
 #> Breakdown threshold = 0.367
 #> Worst-case size envelope for nominal 5% test: 5.0%
 #> VERDICT: INCONCLUSIVE
-#> Note: projected-norm certificate unavailable: the group-time estimator does not cover every treated cell
-#> Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 999 multiplier draws calibrate the 95.0% HC2 projected-vector radius
+#> Note: one-sided procedures unavailable: the group-time estimator does not cover every treated cell
+#> Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 999 multiplier draws calibrate the 95.0% HC2 lower norm radius; the upper procedure uses projected-Wald noncentrality inversion
 #> Note: normalization = direct: psi_hat = 0.751; direct CR1 psi = 0.751; AR(1) psi = 0.931 (rho = -0.065)
 #> Note: directional plug-in unavailable because the group-time profile does not cover every treated cell
 ```
@@ -115,22 +127,27 @@ replacement for a full heterogeneity-robust DiD estimator.
 ## The applications, reproduced from bundled data
 
 The package includes the exact four-column analysis extract for the
-Callaway–Sant’Anna minimum-wage application, along with the
-castle-doctrine and divorce panels. The minimum-wage data contain 15,988
-county-years from 2,284 counties over seven years. The current
-diagnostics are:
+Callaway–Sant’Anna minimum-wage application, the balanced-subset Brazil
+property-tax reanalysis, and the castle-doctrine and divorce panels. The
+minimum-wage data contain 15,988 county-years from 2,284 counties over
+seven years; Brazil contains 34,080 municipality-years from 2,840
+municipalities. The current diagnostics are:
 
 - minimum wage: an equally weighted treated-cell ATT of about -5.2%, a
-  31.6% saturated-class point envelope, and a projected-norm lower
-  endpoint above the threshold, so uniform certification is withheld;
-- castle doctrine: a 5.1% saturated-class point envelope and an HC2
-  upper endpoint below the threshold, hence formal certification at
-  `gamma = 0.05`; the slightly larger HC3 endpoint is a deliberately
-  visible sensitivity;
-- no-fault divorce: a roughly 70% saturated-class point envelope and a
-  wide projected-norm interval crossing the threshold. The width is
-  consistent with the strained fixed-`T` approximation (`G = 49`,
-  `T = 27`).
+  31.6% saturated-class point envelope, and a regular lower bound above
+  the threshold, so uniform certification is withheld;
+- Brazil property tax: 17.3% of treated-cell weights are negative and
+  even the smallest class-specific lower bound exceeds the threshold, so
+  all four prespecified classes withhold certification;
+- castle doctrine: the prespecified additive homicide class has an HC2
+  covariance-aware upper bound near 0.236 and certifies. The saturated
+  class is inconclusive because its projected covariance has rank 18
+  rather than 19;
+- no-fault divorce: a roughly 70% saturated-class point envelope. Its
+  lower bound does not clear the threshold, while the saturated upper
+  procedure is unavailable because the projected covariance has rank 49
+  rather than 167. The fixed-`T` approximation is also strained
+  (`G = 49`, `T = 27`).
 
 The last result illustrates why the point envelope and its uncertainty
 should both be reported. The package never relabels a worst-case
@@ -148,10 +165,21 @@ c(target_att = mw$statistic$att_target,
   directional = mw$statistic$size_directional,
   verdict = mw$verdict)
 
-# Same protocol, opposite certification outcomes.
-castle_report <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)
+data(brazil)
+brazil_report <- twfe_adequacy(brazil$y, brazil$uid, brazil$tid, brazil$ft,
+                                bootstrap = 999)
+brazil_report$statistic[c("verdict_coh", "verdict_evt",
+                          "verdict_cmb", "verdict_gt")]
+
+# Castle certifies for its prespecified additive class; the saturated class is
+# retained as a transparent rank-inconclusive sensitivity.
+castle_report <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+                               heterogeneity_class = "additive")
+castle_saturated <- twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)
 divorce_report <- twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
-c(castle = castle_report$verdict, divorce = divorce_report$verdict)
+c(castle_additive = castle_report$verdict,
+  castle_saturated = castle_saturated$verdict,
+  divorce_saturated = divorce_report$verdict)
 ```
 
 `data(package = "panelcert")` lists the bundled datasets. The full

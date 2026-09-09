@@ -1,5 +1,32 @@
 # Changelog
 
+## panelcert 0.8.0
+
+- Replaced the TWFE confidence-ball upper decision with covariance-aware
+  projected-Wald noncentral-chi-square inversion. An upper certificate
+  is now issued only when the estimated score covariance spans the full
+  prespecified heterogeneity class; rank-deficient classes are reported
+  as structurally `INCONCLUSIVE` unless the one-sided lower test already
+  flags them.
+- Added `heterogeneity_class` so the report verdict can be based on a
+  prespecified saturated group-time, additive, cohort, or event-time
+  class. Every report exposes the separate lower bound, upper bound,
+  rank, and verdict for all four classes.
+- Retained the regular multiplier/reverse-triangle lower test without
+  the old denominator buffer under the bounded local experiment. The
+  more general full confidence-ball construction is available through
+  `q_band`; it is reported separately and never determines the main
+  verdict.
+- Updated the castle-doctrine lock: the additive homicide class
+  certifies with an upper bound near 0.236, while the saturated class is
+  inconclusive because its projected covariance has rank 18/19. The
+  divorce saturated class is likewise reported as rank-deficient
+  (49/167).
+- Reworked the covariance algebra in group-time coordinates, eliminating
+  the quadratic treated-cell covariance allocation. Bundled the
+  reproducible 2,840-municipality Brazil property-tax extract and locked
+  the finding that every class is flagged by its lower test.
+
 ## panelcert 0.7.1
 
 - [`eiv_adequacy()`](https://profsms.github.io/panelcert/reference/eiv_adequacy.md)

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,13 +137,14 @@ interval</td>
 <h2 id="bundled-data-the-paper-applications-run-offline">Bundled data — the paper applications run offline<a class="anchor" aria-label="anchor" href="#bundled-data-the-paper-applications-run-offline"></a>
 </h2>
 <p>The small reference panels ship with the package. After
-<code><a href="https://github.com/profsms/panelcert" class="external-link">library(panelcert)</a></code> the datasets are available by name:</p>
+<code><a href="https://profsms.github.io/panelcert">library(panelcert)</a></code> the datasets are available by name:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/profsms/panelcert" class="external-link">panelcert</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span>package <span class="op">=</span> <span class="st">"panelcert"</span><span class="op">)</span><span class="op">$</span><span class="va">results</span><span class="op">[</span>, <span class="st">"Item"</span><span class="op">]</span>   <span class="co"># vdem, psid, castle, divorce, fscore</span></span>
-<span><span class="co">#&gt; [1] "castle"       "divorce"      "fscore"       "grunfeld"     "minimum_wage"</span></span>
-<span><span class="co">#&gt; [6] "psid"         "twins"        "vdem"</span></span>
-<span><span class="fu"><a href="../reference/twfe_adequacy.html">twfe_adequacy</a></span><span class="op">(</span><span class="va">castle</span><span class="op">$</span><span class="va">y</span>, <span class="va">castle</span><span class="op">$</span><span class="va">uid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">tid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">ft</span><span class="op">)</span><span class="op">$</span><span class="va">verdict</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://profsms.github.io/panelcert">panelcert</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span>package <span class="op">=</span> <span class="st">"panelcert"</span><span class="op">)</span><span class="op">$</span><span class="va">results</span><span class="op">[</span>, <span class="st">"Item"</span><span class="op">]</span>   <span class="co"># includes brazil, castle, divorce, minimum_wage</span></span>
+<span><span class="co">#&gt; [1] "brazil"       "castle"       "divorce"      "fscore"       "grunfeld"    </span></span>
+<span><span class="co">#&gt; [6] "minimum_wage" "psid"         "twins"        "vdem"</span></span>
+<span><span class="fu"><a href="../reference/twfe_adequacy.html">twfe_adequacy</a></span><span class="op">(</span><span class="va">castle</span><span class="op">$</span><span class="va">y</span>, <span class="va">castle</span><span class="op">$</span><span class="va">uid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">tid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">ft</span>,</span>
+<span>              heterogeneity_class <span class="op">=</span> <span class="st">"additive"</span><span class="op">)</span><span class="op">$</span><span class="va">verdict</span></span>
 <span><span class="co">#&gt; [1] "CERTIFIED"</span></span></code></pre></div>
 <p>Paper A’s F-score workflow, Papers B and C, and the diffuse companion
 use these objects. The public KSS worker–firm testing extract is
@@ -158,7 +159,7 @@ dimension <code>d_K</code> (union-find on the unit–time graph), the
 saturation <code>rho = d_K/n</code>, and the two-way within
 transformation.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/profsms/panelcert" class="external-link">panelcert</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://profsms.github.io/panelcert">panelcert</a></span><span class="op">)</span></span>
 <span><span class="va">unit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">40</span>, each <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
 <span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">12</span>, times <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/design_summary.html">design_summary</a></span><span class="op">(</span><span class="va">unit</span>, <span class="va">time</span><span class="op">)</span></span>
@@ -237,8 +238,8 @@ spurious and badly anti-conservative), and the operational threshold
 <code>eta_dagger(alpha, delta)</code> is the exact-inversion root of
 <code>size(eta) = alpha + delta</code>, about 0.652 at
 <code>alpha = delta = 0.05</code>. The empirical applications in the
-source papers (V-Dem democracy–growth, PSID earnings, castle-doctrine
-and no-fault-divorce DiD) are reproduced to reference tolerance by this
+source papers (V-Dem democracy–growth, castle-doctrine, minimum-wage and
+no-fault-divorce DiD) are reproduced to reference tolerance by this
 package’s test suite, in lockstep with the Julia reference
 implementation.</p>
 </div>

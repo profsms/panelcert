@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Inference-Adequacy Diagnostics for Panel-Data Designs">
-<meta name="description" content="Implements exact nuisance-annihilating contrast inference for fixed-effect designs with concentrated identifying variation, and diagnoses when conventional inference is unreliable because of leverage, classical measurement error, or staggered-DiD treatment-effect heterogeneity. Reports design and realized-score concentration, capture, exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal measurement-error thresholds, and TWFE design exposure, direct cluster-score normalization, saturated group-time envelopes, boundary-robust projected-norm certificates, and directional diagnostics.">
-<meta property="og:description" content="Implements exact nuisance-annihilating contrast inference for fixed-effect designs with concentrated identifying variation, and diagnoses when conventional inference is unreliable because of leverage, classical measurement error, or staggered-DiD treatment-effect heterogeneity. Reports design and realized-score concentration, capture, exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal measurement-error thresholds, and TWFE design exposure, direct cluster-score normalization, saturated group-time envelopes, boundary-robust projected-norm certificates, and directional diagnostics.">
+<meta name="description" content="Implements exact nuisance-annihilating contrast inference for fixed-effect designs with concentrated identifying variation, and diagnoses when conventional inference is unreliable because of leverage, classical measurement error, or staggered-DiD treatment-effect heterogeneity. Reports design and realized-score concentration, capture, exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal measurement-error thresholds, and TWFE design exposure, direct cluster-score normalization, saturated group-time envelopes, regular multiplier lower tests, covariance-aware projected-Wald upper certificates, class-specific verdicts, and directional diagnostics.">
+<meta property="og:description" content="Implements exact nuisance-annihilating contrast inference for fixed-effect designs with concentrated identifying variation, and diagnoses when conventional inference is unreliable because of leverage, classical measurement error, or staggered-DiD treatment-effect heterogeneity. Reports design and realized-score concentration, capture, exact sign-flip tests and confidence sets, HC0-HC3 behavior, exact-normal measurement-error thresholds, and TWFE design exposure, direct cluster-score normalization, saturated group-time envelopes, regular multiplier lower tests, covariance-aware projected-Wald upper certificates, class-specific verdicts, and directional diagnostics.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,14 +67,14 @@
 <p>Install the current release from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"profsms/panelcert@v0.7.1"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"profsms/panelcert@v0.8.0"</span><span class="op">)</span></span></code></pre></div>
 <p>The r-universe build will be installable with <code>install.packages("panelcert", repos = c("https://profsms.r-universe.dev", "https://cloud.r-project.org"))</code>. CRAN installation will be documented after acceptance.</p>
 </div>
 <div class="section level2">
 <h2 id="quickstart">Quickstart<a class="anchor" aria-label="anchor" href="#quickstart"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/profsms/panelcert" class="external-link">panelcert</a></span><span class="op">)</span>; <span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">grunfeld</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://profsms.github.io/panelcert">panelcert</a></span><span class="op">)</span>; <span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">grunfeld</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/applicable.html">applicable</a></span><span class="op">(</span><span class="va">grunfeld</span><span class="op">$</span><span class="va">capital</span>, <span class="va">grunfeld</span><span class="op">$</span><span class="va">firm</span>, <span class="va">grunfeld</span><span class="op">$</span><span class="va">year</span>, controls <span class="op">=</span> <span class="va">grunfeld</span><span class="op">$</span><span class="va">value</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $ok</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
@@ -101,7 +101,7 @@
 <li>
 <code>reliability_from_repeats(first, second)</code> estimates within reliability from identically projected repeated measurements; use <code>method = "equal_variance"</code> only when that added restriction is defensible.</li>
 <li>
-<code>twfe_adequacy(y, unit, time, first_treat)</code> reports the saturated group-time envelope, the cohort/event/additive restricted ladder, and a signed directional plug-in. Its formal decision uses a boundary-robust one-sided confidence bound for the projected group-time norm; trace-debiased point envelopes are descriptive. Direct CR1 cluster-score normalization is the default; <code>cluster = "ar1"</code>, <code>cluster = "iid"</code>, and a positive user-supplied <code>psi</code> are sensitivity routes.</li>
+<code>twfe_adequacy(y, unit, time, first_treat)</code> reports the saturated group-time envelope, the cohort/event/additive restricted ladder, and a signed directional plug-in. Its formal decision uses a multiplier lower test and a covariance-aware projected-Wald upper certificate for a prespecified class; trace-debiased point envelopes are descriptive. Direct CR1 cluster-score normalization is the default; <code>cluster = "ar1"</code>, <code>cluster = "iid"</code>, and a positive user-supplied <code>psi</code> are sensitivity routes.</li>
 </ul>
 <p>Default <code><a href="reference/cycle_report.html">cycle_report()</a></code> printing is concise. Detailed caveats remain available in <code>report$notes</code>, <code>show_notes(report)</code>, or <code>print(report, notes = TRUE)</code>.</p>
 <p><code>adequacy_row(x, unit, time, y = NULL)</code> composes the design and capture diagnostics into one flat record for prevalence screens.</p>
@@ -132,7 +132,7 @@
 <code>INCONCLUSIVE</code> is returned when the enumeration floor <code>2^(1-effective_C)</code> exceeds <code>alpha</code>. Its <code>reason</code> distinguishes the coding-invariant binary-treatment floor based on <code>min(n_treated, n_untreated)</code>, which repacking cannot fix, from a selected packing that may be improved.</li>
 </ul>
 <p>Measurement-error reports can additionally return <code>CERTIFIED</code> when the supplied reliability lower bound clears the certified breakdown. The report prints <code>gamma_beta</code>, <code>gamma_lambda</code>, and their total false-certification bound; the legacy argument <code>gamma</code> denotes <code>gamma_beta</code>.</p>
-<p>TWFE reports use <code>CERTIFIED</code> only when the upper endpoint of the projected- norm confidence set lies below the exact-normal threshold, <code>FLAGGED</code> when its lower endpoint lies above the threshold, and <code>INCONCLUSIVE</code> when the interval crosses it. These labels concern uniform certification over the calibrated heterogeneity class; they do not assert that the realized effect profile is a worst-case direction.</p>
+<p>TWFE reports use <code>CERTIFIED</code> only when the covariance-aware upper bound for the selected class lies below the exact-normal threshold, <code>FLAGGED</code> when the regular one-sided lower bound lies above it, and <code>INCONCLUSIVE</code> otherwise. A rank-deficient projected covariance cannot support an upper certificate. Set <code>heterogeneity_class</code> before examining the outcome; <code>q_band</code> requests the more general but less powerful confidence-ball fallback without changing the main verdict. These labels concern uniform certification over the calibrated class; they do not assert that the realized effect profile is a worst-case direction.</p>
 </div>
 <div class="section level2">
 <h2 id="design-only-use">Design-Only Use<a class="anchor" aria-label="anchor" href="#design-only-use"></a>
@@ -143,7 +143,7 @@
 <h2 id="julia-package-and-data">Julia Package And Data<a class="anchor" aria-label="anchor" href="#julia-package-and-data"></a>
 </h2>
 <p>The sibling Julia package is <a href="https://github.com/profsms/PanelAdequacy.jl" class="external-link">PanelAdequacy.jl</a>. Fixed CSV designs and CI enforce agreement to <code>1e-12</code> on numerical outputs and exact agreement on integer fields, verdicts, and packed supports.</p>
-<p>Dataset access follows language conventions: R exposes bundled panels through <code>LazyData</code>; Julia exposes <code>datasets()</code>, <code>datapath()</code>, and <code>load_dataset()</code>. Redistributable paper panels, including V-Dem, repeated-report twins, the 2,284-county minimum-wage application, and the public-domain canonical 11-firm Grunfeld showcase, are bundled for offline replication. <code>inst/DATA_SOURCES.md</code> records pinned provenance and explains why the KSS test extract uses a checksum-pinned direct download instead.</p>
+<p>Dataset access follows language conventions: R exposes bundled panels through <code>LazyData</code>; Julia exposes <code>datasets()</code>, <code>datapath()</code>, and <code>load_dataset()</code>. Redistributable paper panels, including V-Dem, repeated-report twins, the 2,284-county minimum-wage application, the 2,840-municipality Brazil property-tax reanalysis, and the public-domain canonical 11-firm Grunfeld showcase, are bundled for offline replication. <code>inst/DATA_SOURCES.md</code> records pinned provenance and explains why the KSS test extract uses a checksum-pinned direct download instead.</p>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>

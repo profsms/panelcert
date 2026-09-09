@@ -8,8 +8,8 @@ heterogeneity. Reports design and realized-score concentration, capture,
 exact sign-flip tests and confidence sets, HC0-HC3 behavior,
 exact-normal measurement-error thresholds, and TWFE design exposure,
 direct cluster-score normalization, saturated group-time envelopes,
-boundary-robust projected-norm certificates, and directional
-diagnostics.
+regular multiplier lower tests, covariance-aware projected-Wald upper
+certificates, class-specific verdicts, and directional diagnostics.
 
 ## Details
 
@@ -34,3 +34,8 @@ Useful links:
 
 **Maintainer**: Stanislaw M. S. Halkiewicz <stashal@o2.pl>
 ([ORCID](https://orcid.org/0009-0000-7344-7522))
+
+Authors:
+
+- Stanislaw M. S. Halkiewicz <stashal@o2.pl>
+  ([ORCID](https://orcid.org/0009-0000-7344-7522))

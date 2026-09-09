@@ -1,4 +1,4 @@
-# No-fault-divorce adoption panel (flagged application)
+# No-fault-divorce adoption panel (rank-inconclusive application)
 
 State–year panel for the Stevenson–Wolfers no-fault-divorce design
 (Goodman-Bacon's pathology example): near-universal eventual adoption.
@@ -52,7 +52,11 @@ twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
 #> Target-matched robust ATT = -0.07176
 #> Trace-debiased point pilots c_S/sigma: gt = 6.6 | c+e = 5.3 | evt = 2.95 | coh = 5.08
 #> Point worst-case envelopes: group-time = 70.0% | c+e = 41.5% | cohort 20.5% | event 12.8%
-#> Boundary-robust group-time K interval (95.0%, HC2): [0.120, 7.523]; HC3 [0.000, 7.961]
+#> Selected heterogeneity class: group_time (each bound is a separate one-sided 95.0% statement)
+#>   cohort: lower 0.028; upper 7.042; INCONCLUSIVE
+#>   event-time: lower 0.000; upper 3.210; INCONCLUSIVE
+#>   additive: lower 0.046; upper 19.167; INCONCLUSIVE
+#>   group-time: lower 0.120; upper unavailable (covariance rank 49/167); INCONCLUSIVE
 #>   descriptive point-envelope bootstrap (B=999): median 37.8%, 95% [5.0, 86.0]; psi in [2.32, 3.29]
 #> Directional plug-in: eta = +1.629 (alignment +0.568), size 37.1%
 #>   wild directional size: median 16.3%, 95% [5.0, 48.2]
@@ -62,9 +66,9 @@ twfe_adequacy(divorce$y, divorce$uid, divorce$tid, divorce$ft)
 #> Worst-case size envelope for nominal 5% test: 70.0%
 #> VERDICT: INCONCLUSIVE
 #> Note: 2 always-treated unit(s) dropped (setup g >= 2)
-#> Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 999 multiplier draws calibrate the 95.0% HC2 projected-vector radius
+#> Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 999 multiplier draws calibrate the 95.0% HC2 lower norm radius; the upper procedure uses projected-Wald noncentrality inversion
 #> Note: normalization = direct: psi_hat = 2.917; direct CR1 psi = 2.917; AR(1) psi = 1.620 (rho = 0.296)
 #> Note: fixed-T, many-cluster approximation is strained (G = 49, T = 27)
-#> Note: saturated group-time interval [0.120, 7.523] crosses eta-dagger 0.652
+#> Note: saturated group-time upper certificate unavailable: projected score covariance rank 49/167; result is inconclusive for this structural reason
 # }
 ```

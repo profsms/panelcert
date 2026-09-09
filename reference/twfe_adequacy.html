@@ -3,14 +3,18 @@
 Gamma_{S,CR} = Gamma_S/sqrt(psi), covariance-aware pilots
 c_S/sigma, saturated group-time and restricted point envelopes, and
 the signed directional plug-in. A fixed-design cluster-multiplier radius
-yields boundary-robust lower and upper bounds on the population envelope;
-point-envelope bootstrap percentiles remain descriptive. Always-treated
+gives the regular one-sided lower bound. The upper certificate inverts the
+noncentral chi-square law of the projected Wald statistic and is issued only
+when the score covariance has full rank in the prespecified class.
+Point-envelope bootstrap percentiles remain descriptive. Always-treated
 units are dropped."><meta property="og:description" content="Restricted design-statistic ladder, direct CR1 rescaling
 Gamma_{S,CR} = Gamma_S/sqrt(psi), covariance-aware pilots
 c_S/sigma, saturated group-time and restricted point envelopes, and
 the signed directional plug-in. A fixed-design cluster-multiplier radius
-yields boundary-robust lower and upper bounds on the population envelope;
-point-envelope bootstrap percentiles remain descriptive. Always-treated
+gives the regular one-sided lower bound. The upper certificate inverts the
+noncentral chi-square law of the projected Wald statistic and is issued only
+when the score covariance has full rank in the prespecified class.
+Point-envelope bootstrap percentiles remain descriptive. Always-treated
 units are dropped."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -19,7 +23,7 @@ units are dropped."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,8 +62,10 @@ units are dropped."></head><body>
 <code>Gamma_{S,CR} = Gamma_S/sqrt(psi)</code>, covariance-aware pilots
 <code>c_S/sigma</code>, saturated group-time and restricted point envelopes, and
 the signed directional plug-in. A fixed-design cluster-multiplier radius
-yields boundary-robust lower and upper bounds on the population envelope;
-point-envelope bootstrap percentiles remain descriptive. Always-treated
+gives the regular one-sided lower bound. The upper certificate inverts the
+noncentral chi-square law of the projected Wald statistic and is issued only
+when the score covariance has full rank in the prespecified class.
+Point-envelope bootstrap percentiles remain descriptive. Always-treated
 units are dropped.</p>
     </div>
 
@@ -84,9 +90,11 @@ units are dropped.</p>
 <span>  cluster <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"direct"</span>, <span class="st">"ar1"</span>, <span class="st">"iid"</span><span class="op">)</span>,</span>
 <span>  psi <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  controls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"not_yet"</span>, <span class="st">"never"</span><span class="op">)</span>,</span>
+<span>  heterogeneity_class <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"group_time"</span>, <span class="st">"additive"</span>, <span class="st">"cohort"</span>, <span class="st">"event"</span><span class="op">)</span>,</span>
 <span>  bootstrap <span class="op">=</span> <span class="fl">999L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">20260715L</span>,</span>
 <span>  gamma <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  q_band <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -126,9 +134,14 @@ supplied it overrides <code>cluster</code></p></dd>
 (including never-treated) or never-treated only</p></dd>
 
 
+<dt id="arg-heterogeneity-class">heterogeneity_class<a class="anchor" aria-label="anchor" href="#arg-heterogeneity-class"></a></dt>
+<dd><p>prespecified class used for the report verdict:
+saturated group-time, additive cohort-plus-event-time, cohort, or event-time</p></dd>
+
+
 <dt id="arg-bootstrap">bootstrap<a class="anchor" aria-label="anchor" href="#arg-bootstrap"></a></dt>
 <dd><p>number of wild-cluster draws (&gt;0 enables the covariance
-correction, descriptive point summaries, and projected-norm bounds)</p></dd>
+correction, descriptive point summaries, and one-sided procedures)</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
@@ -136,7 +149,13 @@ correction, descriptive point summaries, and projected-norm bounds)</p></dd>
 
 
 <dt id="arg-gamma">gamma<a class="anchor" aria-label="anchor" href="#arg-gamma"></a></dt>
-<dd><p>error probability for the projected-norm confidence set</p></dd>
+<dd><p>error probability for each reported one-sided procedure</p></dd>
+
+
+<dt id="arg-q-band">q_band<a class="anchor" aria-label="anchor" href="#arg-q-band"></a></dt>
+<dd><p>optional relative half-width for the denominator band in the
+more general full confidence-ball construction. It does not affect the
+main decision-specific verdict.</p></dd>
 
 </dl></div>
     <div class="section level2">

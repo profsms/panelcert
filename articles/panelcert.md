@@ -31,16 +31,17 @@ The current source map is:
 ## Bundled data — the paper applications run offline
 
 The small reference panels ship with the package. After
-[`library(panelcert)`](https://github.com/profsms/panelcert) the
-datasets are available by name:
+[`library(panelcert)`](https://profsms.github.io/panelcert) the datasets
+are available by name:
 
 ``` r
 
 library(panelcert)
-data(package = "panelcert")$results[, "Item"]   # vdem, psid, castle, divorce, fscore
-#> [1] "castle"       "divorce"      "fscore"       "grunfeld"     "minimum_wage"
-#> [6] "psid"         "twins"        "vdem"
-twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft)$verdict
+data(package = "panelcert")$results[, "Item"]   # includes brazil, castle, divorce, minimum_wage
+#> [1] "brazil"       "castle"       "divorce"      "fscore"       "grunfeld"    
+#> [6] "minimum_wage" "psid"         "twins"        "vdem"
+twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
+              heterogeneity_class = "additive")$verdict
 #> [1] "CERTIFIED"
 ```
 
@@ -145,6 +146,6 @@ expansion is spurious and badly anti-conservative), and the operational
 threshold `eta_dagger(alpha, delta)` is the exact-inversion root of
 `size(eta) = alpha + delta`, about 0.652 at `alpha = delta = 0.05`. The
 empirical applications in the source papers (V-Dem democracy–growth,
-PSID earnings, castle-doctrine and no-fault-divorce DiD) are reproduced
+castle-doctrine, minimum-wage and no-fault-divorce DiD) are reproduced
 to reference tolerance by this package’s test suite, in lockstep with
 the Julia reference implementation.

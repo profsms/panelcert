@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,7 +85,7 @@ invariant to replicating the panel while the absolute weighting bias
 shrinks — so a design can look safe to estimand-level diagnostics while
 its t-test stays arbitrarily distorted.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/profsms/panelcert" class="external-link">panelcert</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://profsms.github.io/panelcert">panelcert</a></span><span class="op">)</span></span>
 <span><span class="va">N</span> <span class="op">&lt;-</span> <span class="fl">48</span>; <span class="cn">T</span> <span class="op">&lt;-</span> <span class="fl">12</span></span>
 <span><span class="va">unit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">N</span>, each <span class="op">=</span> <span class="cn">T</span><span class="op">)</span>; <span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="cn">T</span>, times <span class="op">=</span> <span class="va">N</span><span class="op">)</span></span>
 <span></span>
@@ -136,12 +136,24 @@ sign of the cluster adjustment is never assumed.</p>
 covariance of the group-time effects supplies the projected
 quadratic-form noise trace, which is removed before the descriptive
 point radius is formed. Because that quadratic pilot is nonregular at
-zero heterogeneity, it does not determine the formal decision. Instead,
-cluster multipliers calibrate a one-sided confidence radius for the
-projected group-time vector before its norm is taken. HC2 is the primary
-bound and HC3 is reported as a leverage sensitivity check. This also
-respects covariance across group-time comparisons that share
-controls.</p>
+zero heterogeneity, it does not determine the formal decision. The
+regular lower test applies the reverse triangle inequality to an HC2
+cluster-multiplier radius. The upper certificate instead inverts the
+noncentral chi-square law of the projected Wald statistic. It is
+available only when the score covariance spans the full prespecified
+heterogeneity class; a rank failure produces <code>INCONCLUSIVE</code>,
+rather than an artificial upper bound. HC3 is reported as a leverage
+sensitivity check.</p>
+<p>Choose the decision class with
+<code>heterogeneity_class = "group_time"</code>,
+<code>"additive"</code>, <code>"cohort"</code>, or <code>"event"</code>
+before inspecting the outcome. The reported lower and upper bounds are
+separate one-sided statements, since only one is used for any verdict.
+If several classes or outcomes are screened as a family, divide
+<code>gamma</code> by the number of planned tests. The optional
+<code>q_band</code> argument reports the more general full
+confidence-ball construction with a relative denominator band; that
+construction is less powerful and does not change the main verdict.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">delta_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.6</span>, <span class="fl">0</span>, <span class="fl">0.6</span><span class="op">)</span>                       <span class="co"># heterogeneous cohort effects</span></span>
 <span><span class="va">eff</span> <span class="op">&lt;-</span> <span class="va">delta_g</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">unit</span> <span class="op">&lt;=</span> <span class="fl">16</span>, <span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">unit</span> <span class="op">&lt;=</span> <span class="fl">32</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
@@ -164,8 +176,8 @@ controls.</p>
 <span><span class="co">#&gt; Breakdown threshold = 0.367</span></span>
 <span><span class="co">#&gt; Worst-case size envelope for nominal 5% test: 5.0%</span></span>
 <span><span class="co">#&gt; VERDICT: INCONCLUSIVE</span></span>
-<span><span class="co">#&gt; Note: projected-norm certificate unavailable: the group-time estimator does not cover every treated cell</span></span>
-<span><span class="co">#&gt; Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 999 multiplier draws calibrate the 95.0% HC2 projected-vector radius</span></span>
+<span><span class="co">#&gt; Note: one-sided procedures unavailable: the group-time estimator does not cover every treated cell</span></span>
+<span><span class="co">#&gt; Note: point pilot: covariance trace computed from the fitted Rademacher score covariance; 999 multiplier draws calibrate the 95.0% HC2 lower norm radius; the upper procedure uses projected-Wald noncentrality inversion</span></span>
 <span><span class="co">#&gt; Note: normalization = direct: psi_hat = 0.751; direct CR1 psi = 0.751; AR(1) psi = 0.931 (rho = -0.065)</span></span>
 <span><span class="co">#&gt; Note: directional plug-in unavailable because the group-time profile does not cover every treated cell</span></span></code></pre></div>
 <p>The internal group-time estimator uses either not-yet-treated units
@@ -179,21 +191,26 @@ heterogeneity-robust DiD estimator.</p>
 <h2 id="the-applications-reproduced-from-bundled-data">The applications, reproduced from bundled data<a class="anchor" aria-label="anchor" href="#the-applications-reproduced-from-bundled-data"></a>
 </h2>
 <p>The package includes the exact four-column analysis extract for the
-Callaway–Sant’Anna minimum-wage application, along with the
-castle-doctrine and divorce panels. The minimum-wage data contain 15,988
-county-years from 2,284 counties over seven years. The current
-diagnostics are:</p>
+Callaway–Sant’Anna minimum-wage application, the balanced-subset Brazil
+property-tax reanalysis, and the castle-doctrine and divorce panels. The
+minimum-wage data contain 15,988 county-years from 2,284 counties over
+seven years; Brazil contains 34,080 municipality-years from 2,840
+municipalities. The current diagnostics are:</p>
 <ul>
 <li>minimum wage: an equally weighted treated-cell ATT of about -5.2%, a
-31.6% saturated-class point envelope, and a projected-norm lower
-endpoint above the threshold, so uniform certification is withheld;</li>
-<li>castle doctrine: a 5.1% saturated-class point envelope and an HC2
-upper endpoint below the threshold, hence formal certification at
-<code>gamma = 0.05</code>; the slightly larger HC3 endpoint is a
-deliberately visible sensitivity;</li>
-<li>no-fault divorce: a roughly 70% saturated-class point envelope and a
-wide projected-norm interval crossing the threshold. The width is
-consistent with the strained fixed-<code>T</code> approximation
+31.6% saturated-class point envelope, and a regular lower bound above
+the threshold, so uniform certification is withheld;</li>
+<li>Brazil property tax: 17.3% of treated-cell weights are negative and
+even the smallest class-specific lower bound exceeds the threshold, so
+all four prespecified classes withhold certification;</li>
+<li>castle doctrine: the prespecified additive homicide class has an HC2
+covariance-aware upper bound near 0.236 and certifies. The saturated
+class is inconclusive because its projected covariance has rank 18
+rather than 19;</li>
+<li>no-fault divorce: a roughly 70% saturated-class point envelope. Its
+lower bound does not clear the threshold, while the saturated upper
+procedure is unavailable because the projected covariance has rank 49
+rather than 167. The fixed-<code>T</code> approximation is also strained
 (<code>G = 49</code>, <code>T = 27</code>).</li>
 </ul>
 <p>The last result illustrates why the point envelope and its
@@ -210,10 +227,21 @@ worst-case envelope as realized size.</p>
 <span>  directional <span class="op">=</span> <span class="va">mw</span><span class="op">$</span><span class="va">statistic</span><span class="op">$</span><span class="va">size_directional</span>,</span>
 <span>  verdict <span class="op">=</span> <span class="va">mw</span><span class="op">$</span><span class="va">verdict</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Same protocol, opposite certification outcomes.</span></span>
-<span><span class="va">castle_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twfe_adequacy.html">twfe_adequacy</a></span><span class="op">(</span><span class="va">castle</span><span class="op">$</span><span class="va">y</span>, <span class="va">castle</span><span class="op">$</span><span class="va">uid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">tid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">ft</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">brazil</span><span class="op">)</span></span>
+<span><span class="va">brazil_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twfe_adequacy.html">twfe_adequacy</a></span><span class="op">(</span><span class="va">brazil</span><span class="op">$</span><span class="va">y</span>, <span class="va">brazil</span><span class="op">$</span><span class="va">uid</span>, <span class="va">brazil</span><span class="op">$</span><span class="va">tid</span>, <span class="va">brazil</span><span class="op">$</span><span class="va">ft</span>,</span>
+<span>                                bootstrap <span class="op">=</span> <span class="fl">999</span><span class="op">)</span></span>
+<span><span class="va">brazil_report</span><span class="op">$</span><span class="va">statistic</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"verdict_coh"</span>, <span class="st">"verdict_evt"</span>,</span>
+<span>                          <span class="st">"verdict_cmb"</span>, <span class="st">"verdict_gt"</span><span class="op">)</span><span class="op">]</span></span>
+<span></span>
+<span><span class="co"># Castle certifies for its prespecified additive class; the saturated class is</span></span>
+<span><span class="co"># retained as a transparent rank-inconclusive sensitivity.</span></span>
+<span><span class="va">castle_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twfe_adequacy.html">twfe_adequacy</a></span><span class="op">(</span><span class="va">castle</span><span class="op">$</span><span class="va">y</span>, <span class="va">castle</span><span class="op">$</span><span class="va">uid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">tid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">ft</span>,</span>
+<span>                               heterogeneity_class <span class="op">=</span> <span class="st">"additive"</span><span class="op">)</span></span>
+<span><span class="va">castle_saturated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twfe_adequacy.html">twfe_adequacy</a></span><span class="op">(</span><span class="va">castle</span><span class="op">$</span><span class="va">y</span>, <span class="va">castle</span><span class="op">$</span><span class="va">uid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">tid</span>, <span class="va">castle</span><span class="op">$</span><span class="va">ft</span><span class="op">)</span></span>
 <span><span class="va">divorce_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twfe_adequacy.html">twfe_adequacy</a></span><span class="op">(</span><span class="va">divorce</span><span class="op">$</span><span class="va">y</span>, <span class="va">divorce</span><span class="op">$</span><span class="va">uid</span>, <span class="va">divorce</span><span class="op">$</span><span class="va">tid</span>, <span class="va">divorce</span><span class="op">$</span><span class="va">ft</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>castle <span class="op">=</span> <span class="va">castle_report</span><span class="op">$</span><span class="va">verdict</span>, divorce <span class="op">=</span> <span class="va">divorce_report</span><span class="op">$</span><span class="va">verdict</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>castle_additive <span class="op">=</span> <span class="va">castle_report</span><span class="op">$</span><span class="va">verdict</span>,</span>
+<span>  castle_saturated <span class="op">=</span> <span class="va">castle_saturated</span><span class="op">$</span><span class="va">verdict</span>,</span>
+<span>  divorce_saturated <span class="op">=</span> <span class="va">divorce_report</span><span class="op">$</span><span class="va">verdict</span><span class="op">)</span></span></code></pre></div>
 <p><code>data(package = "panelcert")</code> lists the bundled datasets.
 The full numerical audit is also executable through the package tests
 and the sibling <code>reproduction/reproduce_with_package.jl</code>

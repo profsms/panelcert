@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">panelcert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,14 @@
       <small>Source: <a href="https://github.com/profsms/panelcert/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.0" id="panelcert-080">panelcert 0.8.0<a class="anchor" aria-label="anchor" href="#panelcert-080"></a></h2>
+<ul><li>Replaced the TWFE confidence-ball upper decision with covariance-aware projected-Wald noncentral-chi-square inversion. An upper certificate is now issued only when the estimated score covariance spans the full prespecified heterogeneity class; rank-deficient classes are reported as structurally <code>INCONCLUSIVE</code> unless the one-sided lower test already flags them.</li>
+<li>Added <code>heterogeneity_class</code> so the report verdict can be based on a prespecified saturated group-time, additive, cohort, or event-time class. Every report exposes the separate lower bound, upper bound, rank, and verdict for all four classes.</li>
+<li>Retained the regular multiplier/reverse-triangle lower test without the old denominator buffer under the bounded local experiment. The more general full confidence-ball construction is available through <code>q_band</code>; it is reported separately and never determines the main verdict.</li>
+<li>Updated the castle-doctrine lock: the additive homicide class certifies with an upper bound near 0.236, while the saturated class is inconclusive because its projected covariance has rank 18/19. The divorce saturated class is likewise reported as rank-deficient (49/167).</li>
+<li>Reworked the covariance algebra in group-time coordinates, eliminating the quadratic treated-cell covariance allocation. Bundled the reproducible 2,840-municipality Brazil property-tax extract and locked the finding that every class is flagged by its lower test.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.1" id="panelcert-071">panelcert 0.7.1<a class="anchor" aria-label="anchor" href="#panelcert-071"></a></h2>
 <ul><li>

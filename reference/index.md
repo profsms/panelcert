@@ -101,12 +101,14 @@ Staggered-adoption design weights and TWFE adequacy diagnostics.
 - [`twins`](https://profsms.github.io/panelcert/reference/twins.md) :
   Ashenfelter–Krueger repeated-report twins extract
 - [`castle`](https://profsms.github.io/panelcert/reference/castle.md) :
-  Castle-doctrine adoption panel (certified application)
+  Castle-doctrine adoption panel (additive-class certificate)
 - [`divorce`](https://profsms.github.io/panelcert/reference/divorce.md)
-  : No-fault-divorce adoption panel (flagged application)
+  : No-fault-divorce adoption panel (rank-inconclusive application)
 - [`fscore`](https://profsms.github.io/panelcert/reference/fscore.md) :
   Piotroski F-Score / Visegrad firm panel (Paper A application)
 - [`grunfeld`](https://profsms.github.io/panelcert/reference/grunfeld.md)
   : Canonical 11-firm Grunfeld investment panel
 - [`minimum_wage`](https://profsms.github.io/panelcert/reference/minimum_wage.md)
   : Minimum-wage county panel (headline TWFE application)
+- [`brazil`](https://profsms.github.io/panelcert/reference/brazil.md) :
+  Brazilian property-tax panel (large-panel TWFE application)
