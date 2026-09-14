@@ -68,7 +68,9 @@ jobs:
           sudo mkdir -p /opt/R/flang-23/lib/clang/23/lib/darwin
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: |
+            any::rcmdcheck
+            any::pak
           needs: check
       - uses: r-lib/actions/check-r-package@v2
         with:
