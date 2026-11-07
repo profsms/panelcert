@@ -10,6 +10,10 @@ jobs:
   R-CMD-check:
     name: ${{ matrix.config.os }} / R ${{ matrix.config.r }}
     runs-on: ${{ matrix.config.os }}
+    # macOS R-devel has no CRAN binaries for the next R version, so every dependency
+    # is built from source and the dependency step fails intermittently (also before
+    # 2026-11, on unrelated commits). Keep the job visible but non-blocking.
+    continue-on-error: ${{ matrix.config.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -18,7 +22,7 @@ jobs:
           - {os: ubuntu-latest, r: 'devel'}
           - {os: ubuntu-latest, r: 'oldrel-1'}
           - {os: macos-latest, r: 'release'}
-          - {os: macos-latest, r: 'devel'}
+          - {os: macos-latest, r: 'devel', experimental: true}
           - {os: macos-latest, r: 'oldrel-1'}
           - {os: windows-latest, r: 'release'}
           - {os: windows-latest, r: 'devel'}
