@@ -38,8 +38,9 @@ are available by name:
 
 library(panelcert)
 data(package = "panelcert")$results[, "Item"]   # includes brazil, castle, divorce, minimum_wage
-#> [1] "brazil"       "castle"       "divorce"      "fscore"       "grunfeld"    
-#> [6] "minimum_wage" "psid"         "twins"        "vdem"
+#>  [1] "brazil"       "castle"       "divorce"      "dots99"       "fscore"      
+#>  [6] "grunfeld"     "haines2017"   "minimum_wage" "psid"         "twins"       
+#> [11] "vdem"
 twfe_adequacy(castle$y, castle$uid, castle$tid, castle$ft,
               heterogeneity_class = "additive")$verdict
 #> [1] "CERTIFIED"

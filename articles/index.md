@@ -12,3 +12,5 @@
   inference](https://profsms.github.io/panelcert/articles/panelcert.md):
 - [TWFE-heterogeneity adequacy for staggered
   DiD](https://profsms.github.io/panelcert/articles/staggered-did.md):
+- [Concurrent controls and heterogeneity tolerance in stepped-wedge
+  trials](https://profsms.github.io/panelcert/articles/stepped-wedge.md):

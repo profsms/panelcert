@@ -253,6 +253,27 @@ Staggered-adoption design weights and TWFE adequacy diagnostics.
 - [`twfe_adequacy()`](https://profsms.github.io/panelcert/reference/twfe_adequacy.md)
   : TWFE-heterogeneity adequacy (covariance-aware, wild-bootstrap)
 
+## Stepped-wedge design
+
+Exposure weights, adequacy radius, ETI cost, and design search for
+stepped-wedge and wait-list designs (Halkiewicz and Alexeev).
+
+- [`sw_exposure_weights()`](https://profsms.github.io/panelcert/reference/sw_exposure_weights.md)
+  : Exposure weights of the immediate-treatment estimator in a
+  stepped-wedge design
+- [`sw_gamma()`](https://profsms.github.io/panelcert/reference/sw_gamma.md)
+  : Worst-case estimand mismatch of the immediate-treatment estimator
+- [`sw_radius()`](https://profsms.github.io/panelcert/reference/sw_radius.md)
+  : Adequacy radius (heterogeneity tolerance) of a stepped-wedge design
+- [`sw_eti_cost()`](https://profsms.github.io/panelcert/reference/sw_eti_cost.md)
+  : Cost of the estimand-aligned (ETI) analysis of a stepped-wedge
+  design
+- [`sw_design_search()`](https://profsms.github.io/panelcert/reference/sw_design_search.md)
+  : Exhaustive search over stepped-wedge and wait-list allocations
+- [`sw_phi_nested()`](https://profsms.github.io/panelcert/reference/sw_phi_nested.md)
+  : Effective Hussey–Hughes parameter under nested-exchangeable
+  correlation
+
 ## Bundled applications
 
 - [`vdem`](https://profsms.github.io/panelcert/reference/vdem.md) :
@@ -273,6 +294,12 @@ Staggered-adoption design weights and TWFE adequacy diagnostics.
   : Minimum-wage county panel (headline TWFE application)
 - [`brazil`](https://profsms.github.io/panelcert/reference/brazil.md) :
   Brazilian property-tax panel (large-panel TWFE application)
+- [`haines2017`](https://profsms.github.io/panelcert/reference/haines2017.md)
+  : Weekend allied-health stepped-wedge trial (Haines et al. 2017, Trial
+  1)
+- [`dots99`](https://profsms.github.io/panelcert/reference/dots99.md) :
+  99DOTS digital adherence stepped-wedge trial, Uganda (Cattamanchi et
+  al. 2021)
 
 # Articles
 
@@ -288,3 +315,5 @@ Staggered-adoption design weights and TWFE adequacy diagnostics.
   inference](https://profsms.github.io/panelcert/articles/panelcert.md):
 - [TWFE-heterogeneity adequacy for staggered
   DiD](https://profsms.github.io/panelcert/articles/staggered-did.md):
+- [Concurrent controls and heterogeneity tolerance in stepped-wedge
+  trials](https://profsms.github.io/panelcert/articles/stepped-wedge.md):

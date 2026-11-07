@@ -8,6 +8,7 @@
 <url><loc>https://profsms.github.io/panelcert/articles/measurement-error.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/articles/panelcert.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/articles/staggered-did.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/articles/stepped-wedge.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/authors.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/index.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/news/index.html</loc></url>
@@ -24,6 +25,7 @@
 <url><loc>https://profsms.github.io/panelcert/reference/cycle_report.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/design_summary.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/divorce.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/dots99.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/eiv_adequacy.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/eiv_adequacy_summary.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/eta_finite_n.html</loc></url>
@@ -31,6 +33,7 @@
 <url><loc>https://profsms.github.io/panelcert/reference/fe_leverage.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/fscore.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/grunfeld.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/haines2017.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/index.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/leverage_report.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/minimum_wage.html</loc></url>
@@ -48,6 +51,12 @@
 <url><loc>https://profsms.github.io/panelcert/reference/signflip_interval.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/signflip_test.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/support_compatibility.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/sw_design_search.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/sw_eti_cost.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/sw_exposure_weights.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/sw_gamma.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/sw_phi_nested.html</loc></url>
+<url><loc>https://profsms.github.io/panelcert/reference/sw_radius.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/tau2_crit.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/twfe_adequacy.html</loc></url>
 <url><loc>https://profsms.github.io/panelcert/reference/twfe_design.html</loc></url>
