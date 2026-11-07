@@ -240,3 +240,67 @@
 #'              grunfeld$year, controls = grunfeld$value, interval = FALSE)
 #' }
 "grunfeld"
+
+#' Weekend allied-health stepped-wedge trial (Haines et al. 2017, Trial 1)
+#'
+#' Analysis extract of Trial 1 of Haines et al. (2017): withdrawal of weekend
+#' allied-health services from 12 acute wards in two hospitals, a complete
+#' stepped wedge with 7 periods and 2 wards starting in each of periods 2--7.
+#' One row per patient episode. Used by Halkiewicz and Alexeev
+#' (arXiv:2610.35853) as the application with visible exposure-time
+#' heterogeneity; the exposure weights of the IT estimator at the trial's actual
+#' cell sizes give an adequacy radius of 0.124.
+#'
+#' @format A data frame with 14,834 rows and 6 variables:
+#' \describe{
+#'   \item{ward}{ward identifier (cluster)}
+#'   \item{site}{hospital}
+#'   \item{period}{study period 1--7}
+#'   \item{start}{first period in which the ward was treated (sequence)}
+#'   \item{trt}{1 if the weekend service had been withdrawn (intervention)}
+#'   \item{acute_los}{acute length of stay in days (analysed on the log scale)}
+#' }
+#' @source Haines TP, Bowles K-A, Mitchell D, et al. (2017). Impact of
+#'   disinvestment from weekend allied health services across acute medical
+#'   and surgical wards: 2 stepped-wedge cluster randomised controlled trials.
+#'   \emph{PLOS Medicine} 14(10): e1002412, \doi{10.1371/journal.pmed.1002412};
+#'   S2 Data, \doi{10.1371/journal.pmed.1002412.s002}. Licence: CC BY 4.0 (not
+#'   covered by the package's MIT licence). Only the six variables above are
+#'   retained; see \code{data-raw/make_sw_trials.py} and
+#'   \code{inst/DATA_SOURCES.md}.
+#' @examples
+#' n <- with(haines2017, tapply(rep(1, nrow(haines2017)), list(ward, period), sum))
+#' starts <- tapply(haines2017$start, haines2017$ward, `[`, 1)
+#' ord <- order(starts, as.numeric(names(starts)))
+#' sw_radius(design = c(2, 2, 2, 2, 2, 2, 0), icc = 0.0709, cac = 1,
+#'           sizes = n[ord, ])
+"haines2017"
+
+#' 99DOTS digital adherence stepped-wedge trial, Uganda (Cattamanchi et al. 2021)
+#'
+#' Patient-level public data of the 99DOTS stepped-wedge trial: 18 health
+#' facilities in six randomisation blocks, eight trial months, treatment
+#' success as the primary outcome. Used by Halkiewicz and Alexeev
+#' (arXiv:2610.35853) as the application with no detectable heterogeneity but
+#' low power to rule out heterogeneity that would damage IT inference.
+#'
+#' @format A data frame with 2,224 rows and 13 variables:
+#' \describe{
+#'   \item{block}{intervention group (randomisation block 1--6)}
+#'   \item{facility}{health facility 1--18 (cluster)}
+#'   \item{facility_type}{facility type}
+#'   \item{month}{trial month 0--7}
+#'   \item{period}{study period: Control, Buffer, or Intervention}
+#'   \item{sex, age, hiv, disease_class, retreatment}{patient characteristics}
+#'   \item{treated_successfully, persisting, not_ltfu}{outcomes (Yes/No)}
+#' }
+#' @source Cattamanchi A, Crowder R, Kityamuwesi A, et al. (2021). Digital
+#'   adherence technology for tuberculosis treatment supervision: a
+#'   stepped-wedge cluster-randomized trial in Uganda. \emph{PLOS Medicine}
+#'   18(5): e1003628, \doi{10.1371/journal.pmed.1003628}; S1 Data,
+#'   \doi{10.1371/journal.pmed.1003628.s002}. Licence: CC BY 4.0 (not covered
+#'   by the package's MIT licence). Column names are snake_case; commas inside
+#'   text labels are replaced by semicolons. See \code{inst/DATA_SOURCES.md}.
+#' @examples
+#' table(dots99$block, dots99$period)
+"dots99"

@@ -1,3 +1,17 @@
+# panelcert 0.9.0 (development, unreleased)
+
+- New stepped-wedge design module (Halkiewicz and Alexeev, *Concurrent controls
+  and heterogeneity tolerance in stepped-wedge trials*, arXiv:2610.35853):
+  `sw_exposure_weights()`, `sw_gamma()`, `sw_radius()`, `sw_eti_cost()`,
+  `sw_design_search()` and `sw_phi_nested()`. They cover Hussey--Hughes GLS,
+  two-way fixed effects, nested-exchangeable correlation (effective
+  `phi'`) and optional unequal cluster-period sizes.
+- New bundled datasets `haines2017` (Haines et al. 2017, Trial 1 analysis
+  extract) and `dots99` (Cattamanchi et al. 2021, 99DOTS S1 Data), both CC BY
+  4.0 and not covered by the package's MIT licence (see `inst/DATA_SOURCES.md`).
+- Tests reproduce the paper's closed forms (T = 3--10) and its reference
+  numbers, with cross-language parity against Python and Julia at 1e-10.
+
 # panelcert 0.8.0
 
 - Replaced the TWFE confidence-ball upper decision with covariance-aware

@@ -52,6 +52,15 @@ reference:
       - twfe_design
       - twfe_gammas
       - twfe_adequacy
+  - title: Stepped-wedge design
+    desc: Exposure weights, adequacy radius, ETI cost, and design search for stepped-wedge and wait-list designs (Halkiewicz and Alexeev).
+    contents:
+      - sw_exposure_weights
+      - sw_gamma
+      - sw_radius
+      - sw_eti_cost
+      - sw_design_search
+      - sw_phi_nested
   - title: Bundled applications
     contents:
       - vdem
@@ -63,3 +72,5 @@ reference:
       - grunfeld
       - minimum_wage
       - brazil
+      - haines2017
+      - dots99
